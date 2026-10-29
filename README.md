@@ -1,4 +1,8 @@
-# NLP Procurement Tender & Bidder Compliance Analysis System
+# TenderIQ
+
+AI-powered bid compliance verification for GeM procurement using NLP, semantic search, Natural Language Inference (NLI), numeric validation, and cross-document evidence reconciliation.
+
+## NLP Procurement Tender & Bidder Compliance Analysis System
 
 An end-to-end Natural Language Processing (NLP) pipeline designed to evaluate procurement tender documents (RFPs, IFBs) against bidder proposals.
 
