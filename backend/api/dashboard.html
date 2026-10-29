@@ -1,0 +1,2366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TenderIQ | AI Bid Compliance Dashboard | Phase 7 Multi-Document Platform</title>
+  <meta name="description" content="TenderIQ – AI-Powered Bid Compliance Verification Platform for GeM Procurement. Phase 7 Multi-Document Platform with Phase 7: Multi-Document Reconciliation.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --sidebar-bg:    #102A43;
+      --sidebar-w:     220px;
+      --primary:       #2563EB;
+      --primary-dark:  #1D4ED8;
+      --primary-light: #EFF6FF;
+      --bg:            #F5F8FC;
+      --card-bg:       #FFFFFF;
+      --border:        #E2E8F0;
+      --text:          #10243A;
+      --text-muted:    #64748B;
+      --compliant:     #16A34A;
+      --uncertain:     #F59E0B;
+      --non-compliant: #DC2626;
+      --missing:       #64748B;
+      --topbar-h:      56px;
+      --radius:        10px;
+      --shadow:        0 1px 4px rgba(16,36,58,.07), 0 0 0 1px var(--border);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+    }
+    .sb-logo {
+      padding: 20px 18px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .sb-logo-icon {
+      width: 36px; height: 36px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .sb-logo-text { font-weight: 800; font-size: 15px; color: #fff; letter-spacing: .3px; }
+    .sb-logo-sub { font-size: 9px; color: #7B9BB8; letter-spacing: .8px; text-transform: uppercase; margin-top: 1px; }
+    .sb-nav { flex: 1; overflow-y: auto; padding: 10px 0; }
+    .sb-section-label {
+      font-size: 9px; font-weight: 700; color: #4A6A85;
+      letter-spacing: 1px; text-transform: uppercase;
+      padding: 14px 18px 6px;
+    }
+    .sb-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 18px;
+      color: #8DACC4;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      position: relative; text-decoration: none;
+    }
+    .sb-item:hover { background: rgba(255,255,255,.06); color: #C8DCF0; }
+    .sb-item.active {
+      background: var(--primary);
+      color: #fff;
+    }
+    .sb-item.active::before {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: 3px; background: #fff; border-radius: 0 2px 2px 0;
+    }
+    .sb-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+    .sb-badge {
+      margin-left: auto;
+      background: var(--non-compliant);
+      color: #fff; font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 9999px;
+    }
+    .sb-divider { height: 1px; background: rgba(255,255,255,.06); margin: 8px 0; }
+    .sb-status {
+      padding: 14px 18px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+    .sb-status-title { font-size: 10px; color: #4A6A85; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 8px; }
+    .sb-status-row { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #8DACC4; padding: 2px 0; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #16A34A; flex-shrink: 0; }
+    .dot.warn { background: var(--uncertain); }
+    .sb-user {
+      padding: 12px 18px;
+      border-top: 1px solid rgba(255,255,255,.07);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sb-avatar {
+      width: 32px; height: 32px; background: var(--primary);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0;
+    }
+    .sb-user-name { font-size: 12px; font-weight: 600; color: #C8DCF0; }
+    .sb-user-role { font-size: 10px; color: #4A6A85; }
+
+    /* ── Main area ── */
+    #main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ── */
+    #topbar {
+      height: var(--topbar-h);
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 28px;
+      gap: 16px;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-muted);
+      flex: 1;
+    }
+    .topbar-breadcrumb span:last-child { color: var(--text); font-weight: 600; }
+    .topbar-breadcrumb .sep { color: #CBD5E1; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .topbar-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 12px;
+      font-size: 12px; color: var(--text-muted);
+      cursor: pointer; transition: all .15s;
+      display: flex; align-items: center; gap: 6px; font-family: inherit;
+    }
+    .topbar-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+    /* ── Page content container ── */
+    #content {
+      flex: 1;
+      padding: 28px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── Headings & actions ── */
+    .page-heading {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
+    }
+    .page-heading h1 { font-size: 22px; font-weight: 800; color: var(--text); }
+    .page-heading p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .heading-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+    .btn-primary {
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 8px;
+      padding: 9px 18px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+      display: inline-flex; align-items: center; gap: 6px; font-family: inherit;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-outline {
+      background: #fff; color: var(--primary);
+      border: 1px solid var(--primary); border-radius: 8px;
+      padding: 9px 18px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all .15s;
+      display: inline-flex; align-items: center; gap: 6px; font-family: inherit;
+    }
+    .btn-outline:hover { background: var(--primary-light); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* ── KPI cards ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex; align-items: flex-start; gap: 14px;
+      box-shadow: var(--shadow);
+      transition: box-shadow .2s, transform .15s;
+      cursor: pointer;
+    }
+    .kpi-card:hover { box-shadow: 0 4px 16px rgba(16,36,58,.10); transform: translateY(-1px); }
+    .kpi-icon {
+      width: 42px; height: 42px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .kpi-icon.blue  { background: #EFF6FF; }
+    .kpi-icon.amber { background: #FFFBEB; }
+    .kpi-icon.red   { background: #FEF2F2; }
+    .kpi-icon.green { background: #F0FDF4; }
+    .kpi-body { flex: 1; }
+    .kpi-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+    .kpi-value { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1.1; margin-top: 4px; }
+    .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+
+    /* ── Two-column overview + queue ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .panel-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .panel-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    }
+    .panel-header h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+    .panel-header p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .panel-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .view-all-link { font-size: 12px; color: var(--primary); font-weight: 600; cursor: pointer; text-decoration: none; }
+    .view-all-link:hover { text-decoration: underline; }
+    .panel-body { padding: 20px; }
+
+    /* Compliance distribution bar */
+    .dist-bar {
+      display: flex; border-radius: 6px; overflow: hidden; height: 24px;
+      margin: 16px 0 14px;
+    }
+    .dist-seg {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #fff;
+      transition: width .5s ease;
+      min-width: 0; overflow: hidden;
+    }
+    .dist-seg.compliant     { background: var(--compliant); }
+    .dist-seg.non_compliant { background: var(--non-compliant); }
+    .dist-seg.uncertain     { background: var(--uncertain); }
+    .dist-seg.missing       { background: var(--missing); }
+    .dist-legend { display: flex; flex-wrap: wrap; gap: 12px 20px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .legend-dot.compliant     { background: var(--compliant); }
+    .legend-dot.non_compliant { background: var(--non-compliant); }
+    .legend-dot.uncertain     { background: var(--uncertain); }
+    .legend-dot.missing       { background: var(--missing); }
+    .legend-label { font-size: 12px; color: var(--text); }
+    .legend-count { font-size: 11px; color: var(--text-muted); }
+
+    /* Review queue */
+    .queue-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 0; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .15s;
+    }
+    .queue-item:hover { background: #F8FAFC; }
+    .queue-item:last-child { border-bottom: none; }
+    .queue-doc-icon {
+      width: 32px; height: 32px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .queue-doc-icon.red-icon   { background: #FEF2F2; }
+    .queue-doc-icon.amber-icon { background: #FFFBEB; }
+    .queue-doc-icon.slate-icon { background: #F1F5F9; }
+    .queue-info { flex: 1; min-width: 0; }
+    .queue-tender { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .queue-req { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .queue-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+    .queue-chevron { color: #CBD5E1; font-size: 12px; }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 5px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+      white-space: nowrap;
+    }
+    .badge.compliant        { background: #DCFCE7; color: #15803D; }
+    .badge.non_compliant    { background: #FEE2E2; color: #B91C1C; }
+    .badge.uncertain        { background: #FEF3C7; color: #B45309; }
+    .badge.missing_evidence { background: #F1F5F9; color: #475569; }
+    .badge.conflict         { background: #FEE2E2; color: #B91C1C; border: 1px solid #FCA5A5; }
+    .badge.need_review      { background: #FEF3C7; color: #B45309; }
+    .badge.phase7           { background: #EFF6FF; color: var(--primary); font-size: 9px; letter-spacing: .08em; }
+    .severity-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10px; font-weight: 600; color: var(--text-muted);
+    }
+    .sev-bar { width: 3px; border-radius: 2px; display: inline-block; }
+    .sev-bar.high   { background: var(--non-compliant); }
+    .sev-bar.medium { background: var(--uncertain); }
+    .sev-bar.low    { background: var(--missing); }
+
+    /* ── Cross-Document Intelligence panel ── */
+    .xdoc-card {
+      background: #fff;
+      border: 1.5px solid #FCA5A5;
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(220,38,38,.08);
+    }
+    .xdoc-card.no-conflict {
+      border-color: var(--border);
+      box-shadow: var(--shadow);
+    }
+    .xdoc-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: #FFF5F5;
+    }
+    .xdoc-card.no-conflict .xdoc-header { background: #F8FAFC; }
+    .xdoc-header-left { display: flex; align-items: center; gap: 10px; }
+    .xdoc-alert-icon {
+      width: 34px; height: 34px; background: #FEE2E2; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+    }
+    .xdoc-card.no-conflict .xdoc-alert-icon { background: #F0FDF4; }
+    .xdoc-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .xdoc-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .xdoc-body { padding: 20px; display: grid; grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; align-items: start; gap: 16px; }
+    .xdoc-col { min-width: 0; }
+    .xdoc-col-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+    .xdoc-inner {
+      border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+      font-size: 12px;
+    }
+    .xdoc-inner.proposal    { border-top: 3px solid var(--primary); }
+    .xdoc-inner.annexure    { border-top: 3px solid var(--compliant); }
+    .xdoc-inner.requirement { border-top: 3px solid var(--uncertain); }
+    .xdoc-inner.assessment  { border-top: 3px solid var(--non-compliant); }
+    .xdoc-inner.assessment.compliant-assess { border-top-color: var(--compliant); }
+    .xdoc-file { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .xdoc-page { font-size: 10px; color: var(--text-muted); }
+    .xdoc-value { font-size: 16px; font-weight: 800; color: var(--primary); margin: 5px 0; }
+    .xdoc-value.auth { color: var(--compliant); }
+    .xdoc-value.req  { color: var(--uncertain); }
+    .xdoc-value.bad  { color: var(--non-compliant); }
+    .xdoc-desc { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .xdoc-arrow { font-size: 18px; color: #CBD5E1; align-self: center; padding-top: 22px; }
+    .xdoc-assess-label { margin-top: 6px; }
+    .xdoc-reasoning {
+      margin-top: 8px; font-size: 11px; color: var(--text-muted);
+      line-height: 1.5; background: #F8FAFC;
+      border-radius: 6px; padding: 8px 10px;
+    }
+    .xdoc-empty {
+      padding: 32px 20px; text-align: center;
+      color: var(--text-muted); font-size: 13px;
+    }
+
+    /* ── Tables ── */
+    .table-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+    .table-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .table-header h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+    .table-header p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      background: #F8FAFC;
+      padding: 10px 16px; color: var(--text-muted);
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+      border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap;
+    }
+    tbody td {
+      padding: 13px 16px; border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #F8FAFC; }
+    .td-tender { font-weight: 700; color: var(--primary); font-size: 12px; }
+    .td-bidder { font-size: 12px; color: var(--text); }
+    .td-num { font-size: 13px; font-weight: 600; text-align: right; }
+    .td-num.c { color: var(--compliant); }
+    .td-num.nc { color: var(--non-compliant); }
+    .td-num.u { color: var(--uncertain); }
+    .td-num.conf { color: var(--non-compliant); }
+    .td-date { font-size: 11px; color: var(--text-muted); }
+    .td-actions { text-align: right; }
+    .act-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-muted);
+      cursor: pointer; font-size: 12px; padding: 4px 10px; border-radius: 6px;
+      transition: all .15s; font-family: inherit;
+    }
+    .act-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+    /* ── Analysis form card ── */
+    .form-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.4fr 1fr 1fr auto;
+      gap: 16px;
+      align-items: end;
+      box-shadow: var(--shadow);
+    }
+    .form-card-header {
+      grid-column: 1/-1;
+      display: flex; align-items: center; gap: 8px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+    .form-card-header h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+    .form-card-header p { font-size: 12px; color: var(--text-muted); }
+    .form-group label {
+      display: block; font-size: 11px; font-weight: 600;
+      color: var(--text-muted); margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    select, input[type="text"] {
+      width: 100%; background: #fff;
+      border: 1px solid var(--border); color: var(--text);
+      padding: 9px 12px; border-radius: 8px; font-size: 13px; outline: none;
+      font-family: inherit;
+      transition: border-color .15s;
+    }
+    select:focus, input[type="text"]:focus { border-color: var(--primary); }
+    .annexure-box {
+      background: #F8FAFC; border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px; min-height: 40px;
+      font-size: 12px; display: flex; flex-direction: column;
+      justify-content: center; gap: 4px;
+    }
+    .badge-pkg {
+      background: #EFF6FF; color: var(--primary);
+      font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 600;
+    }
+    .pkg-summary-bar {
+      grid-column: 1/-1;
+      background: #F0F9FF; border: 1px solid #BAE6FD;
+      border-radius: 8px; padding: 10px 16px;
+      font-size: 12px; color: var(--text-muted);
+      display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    }
+    .pkg-summary-bar strong { color: var(--text); }
+
+    /* ── Clause results & stats strip ── */
+    .clause-table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .clause-table-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .stats-strip {
+      display: grid; grid-template-columns: repeat(6, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    .stat-mini {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .stat-mini .s-val { font-size: 22px; font-weight: 800; color: var(--text); }
+    .stat-mini .s-lbl { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-top: 3px; }
+    .stat-mini.s-comp .s-val { color: var(--compliant); }
+    .stat-mini.s-non  .s-val { color: var(--non-compliant); }
+    .stat-mini.s-unc  .s-val { color: var(--uncertain); }
+    .stat-mini.s-miss .s-val { color: var(--missing); }
+    .stat-mini.s-conf { border-color: rgba(220,38,38,.25); background: rgba(220,38,38,.03); }
+    .stat-mini.s-conf .s-val { color: var(--non-compliant); }
+
+    /* Evidence & reasoning */
+    .ev-box {
+      background: #F8FAFC; border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px; font-size: 12px; margin-top: 6px; color: var(--text);
+    }
+    .ev-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .reasoning-box { font-size: 12px; color: var(--primary); margin-top: 6px; }
+    .conflict-card {
+      background: #FEF2F2; border: 1px solid #FCA5A5;
+      border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 12px;
+    }
+    .conflict-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .conflict-src {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 8px; font-size: 11px;
+    }
+    .conflict-src.auth { border-color: #FCA5A5; background: #FEF2F2; }
+    .conflict-reasoning { font-size: 11px; color: #B91C1C; line-height: 1.4; }
+
+    /* ── Filter toolbar ── */
+    .filter-toolbar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .filter-search { flex: 1; min-width: 200px; }
+    .filter-select { width: 180px; }
+
+    /* ── Info grid cards (Tenders, Evidence, Settings) ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .doc-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px;
+      box-shadow: var(--shadow); transition: all .15s;
+      display: flex; flex-direction: column;
+    }
+    .doc-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(37,99,235,.08); }
+    .doc-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .doc-card-icon {
+      width: 38px; height: 38px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0; background: var(--primary-light);
+    }
+    .doc-card-title { font-weight: 700; font-size: 13px; color: var(--text); word-break: break-all; }
+    .doc-card-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; flex: 1; }
+    .doc-card-footer { border-top: 1px solid var(--border); padding-top: 12px; display: flex; align-items: center; justify-content: space-between; }
+
+    /* ── Modal overlay & content ── */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(16, 36, 58, .6);
+      backdrop-filter: blur(2px);
+      z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .modal-card {
+      background: #fff;
+      border-radius: 12px;
+      max-width: 1100px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 20px 40px rgba(0,0,0,.2);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: #F8FAFC;
+    }
+    .modal-body {
+      padding: 24px; overflow-y: auto; flex: 1;
+    }
+    .modal-close {
+      background: none; border: none; font-size: 20px;
+      color: var(--text-muted); cursor: pointer; padding: 4px 8px; border-radius: 6px;
+    }
+    .modal-close:hover { background: #E2E8F0; color: var(--text); }
+
+    /* ── Misc ── */
+    .loading-area {
+      display: none; text-align: center; padding: 48px;
+      color: var(--text-muted); font-size: 14px;
+    }
+    .spinner {
+      width: 28px; height: 28px; border: 3px solid var(--border);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin .8s linear infinite; margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .disclaimer {
+      background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px;
+      padding: 12px 16px; font-size: 12px; color: #92400E; margin-top: 16px;
+    }
+    .notice-box {
+      background: #EFF6FF; border: 1px solid #BAE6FD; border-radius: 8px;
+      padding: 12px 16px; font-size: 12px; color: #1E40AF; margin-bottom: 20px;
+    }
+    .phase7-ribbon {
+      background: #EFF6FF; color: var(--primary);
+      font-size: 10px; font-weight: 800; letter-spacing: .1em;
+      padding: 4px 10px; border-radius: 5px; text-transform: uppercase;
+    }
+    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+    .section-divider {
+      display: flex; align-items: center; gap: 12px; margin: 24px 0;
+    }
+    .section-divider hr { flex: 1; border: none; border-top: 1px solid var(--border); }
+    .section-divider span { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+
+    /* Print styles */
+    @media print {
+      #sidebar, #topbar, .heading-actions, .filter-toolbar, .act-btn, .modal-close { display: none !important; }
+      #main { margin-left: 0 !important; }
+      body { background: #fff !important; color: #000 !important; }
+      .panel-card, .table-card, .xdoc-card, .doc-card, .modal-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">🛡️</div>
+    <div>
+      <div class="sb-logo-text">TenderIQ</div>
+      <div class="sb-logo-sub">AI Bid Compliance</div>
+    </div>
+  </div>
+
+  <div class="sb-nav">
+    <div class="sb-section-label">Main</div>
+    <a class="sb-item active" href="#overview" id="nav-overview" onclick="navigate('overview'); return false;">
+      <span class="sb-icon">⊞</span> Overview
+    </a>
+    <a class="sb-item" href="#tenders" id="nav-tenders" onclick="navigate('tenders'); return false;">
+      <span class="sb-icon">📄</span> Tenders
+    </a>
+    <a class="sb-item" href="#bid-analysis" id="nav-bid-analysis" onclick="navigate('bid-analysis'); return false;">
+      <span class="sb-icon">📊</span> Bid Analysis
+    </a>
+    <a class="sb-item" href="#conflicts" id="nav-conflicts" onclick="navigate('conflicts'); return false;">
+      <span class="sb-icon">⚠️</span> Cross-Doc Conflicts
+      <span class="sb-badge" id="conflict-nav-badge" style="display:none;">0</span>
+    </a>
+
+    <div class="sb-divider"></div>
+    <div class="sb-section-label">Resources</div>
+    <a class="sb-item" href="#evidence" id="nav-evidence" onclick="navigate('evidence'); return false;">
+      <span class="sb-icon">🔍</span> Evidence Library
+    </a>
+    <a class="sb-item" href="#reports" id="nav-reports" onclick="navigate('reports'); return false;">
+      <span class="sb-icon">📈</span> Reports
+    </a>
+    <a class="sb-item" href="#audit" id="nav-audit" onclick="navigate('audit'); return false;">
+      <span class="sb-icon">📋</span> Audit Trail
+    </a>
+    <div class="sb-divider"></div>
+    <a class="sb-item" href="#settings" id="nav-settings" onclick="navigate('settings'); return false;">
+      <span class="sb-icon">⚙️</span> Settings
+    </a>
+  </div>
+
+  <!-- System status -->
+  <div class="sb-status">
+    <div class="sb-status-title">System Status</div>
+    <div class="sb-status-row" id="stat-nlp">
+      <span class="dot"></span> NLP Models <span style="margin-left:auto;font-size:10px;color:#16A34A;" id="nlp-status-text">—</span>
+    </div>
+    <div class="sb-status-row" id="stat-semantic">
+      <span class="dot"></span> Semantic Search <span style="margin-left:auto;font-size:10px;color:#16A34A;" id="semantic-status-text">—</span>
+    </div>
+    <div class="sb-status-row" id="stat-nli">
+      <span class="dot"></span> NLI Classifier <span style="margin-left:auto;font-size:10px;color:#16A34A;" id="nli-status-text">—</span>
+    </div>
+    <div class="sb-status-row" id="stat-reconciler">
+      <span class="dot"></span> Reconciler (Phase 7) <span style="margin-left:auto;font-size:10px;color:#16A34A;" id="reconciler-status-text">—</span>
+    </div>
+  </div>
+
+  <div class="sb-user">
+    <div class="sb-avatar">PT</div>
+    <div>
+      <div class="sb-user-name">Procurement Team</div>
+      <div class="sb-user-role">Project Demo</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════ MAIN AREA ═══════════ -->
+<div id="main">
+
+  <!-- Top bar -->
+  <header id="topbar">
+    <div class="topbar-breadcrumb">
+      <span>Procurement Intelligence</span>
+      <span class="sep">›</span>
+      <span id="breadcrumb-current">Overview</span>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="navigate('bid-analysis')">
+        🔎 New Analysis
+      </button>
+      <button class="topbar-btn" onclick="navigate('reports')">
+        📈 View Reports
+      </button>
+    </div>
+  </header>
+
+  <!-- Page content -->
+  <main id="content">
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW 1: OVERVIEW                                      -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="view-overview" class="spa-view">
+      <div class="page-heading">
+        <div>
+          <h1>Good morning, Procurement Team</h1>
+          <p>NLP Procurement Tender & Bidder Compliance Analysis &bull; Here is your bid compliance overview.</p>
+        </div>
+        <div class="heading-actions">
+          <button class="btn-primary" onclick="navigate('bid-analysis')">
+            + Analyze New Bid
+          </button>
+          <button class="btn-outline" onclick="navigate('reports')">
+            📈 View Reports
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card" onclick="navigate('tenders')">
+          <div class="kpi-icon blue">📄</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Tenders Evaluated</div>
+            <div class="kpi-value" id="kpi-analyses">—</div>
+            <div class="kpi-sub" id="kpi-analyses-sub">Loading…</div>
+          </div>
+        </div>
+        <div class="kpi-card" onclick="navigate('evidence')">
+          <div class="kpi-icon blue">👥</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Bid Packages</div>
+            <div class="kpi-value" id="kpi-bidders">—</div>
+            <div class="kpi-sub" id="kpi-bidders-sub">Loading…</div>
+          </div>
+        </div>
+        <div class="kpi-card" onclick="navigate('reports')">
+          <div class="kpi-icon amber">⚠️</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Need Review</div>
+            <div class="kpi-value" id="kpi-review">—</div>
+            <div class="kpi-sub" id="kpi-review-sub">Loading…</div>
+          </div>
+        </div>
+        <div class="kpi-card" onclick="navigate('conflicts')">
+          <div class="kpi-icon red">🔄</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Cross-Doc Conflicts</div>
+            <div class="kpi-value" id="kpi-conflicts">—</div>
+            <div class="kpi-sub" id="kpi-conflicts-sub">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two-column: Compliance Overview + Review Queue -->
+      <div class="two-col" id="overview-section">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>📊 Compliance Overview</h3>
+              <p>Distribution of clause evaluation results across all analyses</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div id="dist-bar-container">
+              <div class="dist-bar" id="dist-bar">
+                <div class="dist-seg compliant" id="seg-comp" style="width:0%"></div>
+                <div class="dist-seg non_compliant" id="seg-non" style="width:0%"></div>
+                <div class="dist-seg uncertain" id="seg-unc" style="width:0%"></div>
+                <div class="dist-seg missing" id="seg-miss" style="width:0%"></div>
+              </div>
+              <div class="dist-legend">
+                <div class="legend-item">
+                  <span class="legend-dot compliant"></span>
+                  <div>
+                    <div class="legend-label">Compliant <span id="leg-comp-pct">—</span></div>
+                    <div class="legend-count" id="leg-comp-count">— clauses</div>
+                  </div>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot non_compliant"></span>
+                  <div>
+                    <div class="legend-label">Non-compliant <span id="leg-non-pct">—</span></div>
+                    <div class="legend-count" id="leg-non-count">— clauses</div>
+                  </div>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot uncertain"></span>
+                  <div>
+                    <div class="legend-label">Uncertain <span id="leg-unc-pct">—</span></div>
+                    <div class="legend-count" id="leg-unc-count">— clauses</div>
+                  </div>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot missing"></span>
+                  <div>
+                    <div class="legend-label">Missing evidence <span id="leg-miss-pct">—</span></div>
+                    <div class="legend-count" id="leg-miss-count">— clauses</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="no-data-overview" style="display:none;" class="empty-state">
+              <div style="font-size:32px;margin-bottom:8px;">📋</div>
+              No analyses yet. Run your first bid analysis below.
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>☰ Review Queue</h3>
+              <p>Clauses requiring human review</p>
+            </div>
+            <div class="panel-header-actions">
+              <a class="view-all-link" href="#reports" onclick="navigate('reports'); return false;">View all →</a>
+            </div>
+          </div>
+          <div class="panel-body" style="padding:8px 16px;">
+            <div id="review-queue-list">
+              <div class="empty-state">Loading review queue…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cross-Document Intelligence Panel -->
+      <div id="xdoc-panel" class="xdoc-card no-conflict">
+        <div class="xdoc-header">
+          <div class="xdoc-header-left">
+            <div class="xdoc-alert-icon" id="xdoc-alert-icon">✅</div>
+            <div>
+              <div class="xdoc-title">Cross-Document Intelligence</div>
+              <div class="xdoc-sub" id="xdoc-sub-text">Phase 7 Multi-Document Reconciliation results</div>
+            </div>
+          </div>
+          <span class="phase7-ribbon">Phase 7: Multi-Document Reconciliation</span>
+        </div>
+        <div id="xdoc-body">
+          <div class="xdoc-empty">
+            <div style="font-size:36px;margin-bottom:8px;">🔄</div>
+            <div>Select a tender and bidder package in <strong>Bid Analysis</strong> to inspect cross-document evidence reconciliation.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Analyses Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <div>
+            <h3>Recent Analyses</h3>
+            <p>Latest bid compliance evaluations</p>
+          </div>
+          <a class="view-all-link" href="#reports" onclick="navigate('reports'); return false;">View all →</a>
+        </div>
+        <div id="recent-table-container">
+          <div class="empty-state" style="padding:32px;">Loading analyses…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW 2: TENDERS                                       -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="view-tenders" class="spa-view" style="display:none;">
+      <div class="page-heading">
+        <div>
+          <h1>Procurement Tenders</h1>
+          <p>Authoritative RFP specifications available in the local repository for automated compliance verification</p>
+        </div>
+        <div class="heading-actions">
+          <button class="btn-primary" onclick="navigate('bid-analysis')">
+            + Run Analysis on Tender
+          </button>
+        </div>
+      </div>
+
+      <div class="notice-box">
+        <strong>Repository Dataset:</strong> Tenders are ingested from the authoritative PDF dataset with full structural and section parsing.
+      </div>
+
+      <div id="tenders-grid" class="cards-grid">
+        <div class="empty-state">Loading tenders…</div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW 3: BID ANALYSIS WORKBENCH                        -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="view-bid-analysis" class="spa-view" style="display:none;">
+      <div class="page-heading">
+        <div>
+          <h1>Bid Compliance Analysis Workbench</h1>
+          <p>Select RFP tender specifications and bidder packages to execute NLP evidence extraction, scoring, and Phase 7 reconciliation</p>
+        </div>
+        <div class="heading-actions">
+          <button class="btn-outline" onclick="navigate('reports')">
+            📈 View Past Reports
+          </button>
+        </div>
+      </div>
+
+      <div class="form-card" id="control-card">
+        <div class="form-card-header">
+          <div style="font-size:18px;">🔬</div>
+          <div>
+            <h3>Bid Compliance Analysis</h3>
+            <p>Select a tender RFP, bidder proposal, and optional annexures to run full pipeline analysis</p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="select-tender">1. Tender RFP Document</label>
+          <select id="select-tender"></select>
+        </div>
+        <div class="form-group">
+          <label for="select-bidder">2. Bidder Proposal</label>
+          <select id="select-bidder" onchange="onBidderSelectionChanged()"></select>
+        </div>
+        <div class="form-group">
+          <label>3. Package Annexures</label>
+          <div id="annexure-selection-container" class="annexure-box">
+            <span style="color:var(--text-muted);">Loading packages…</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="select-retriever">4. Retrieval Engine</label>
+          <select id="select-retriever">
+            <option value="semantic">Sentence-BERT (all-MiniLM-L6-v2)</option>
+            <option value="tfidf">TF-IDF Keyword Baseline</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="select-nli">5. NLI Verification</label>
+          <select id="select-nli">
+            <option value="true">Enabled (cross-encoder/nli-distilroberta-base)</option>
+            <option value="false">Disabled (Deterministic Rule Baseline)</option>
+          </select>
+        </div>
+        <button id="btn-run" class="btn-primary" onclick="runAnalysis()">
+          ▶ Run Analysis
+        </button>
+      </div>
+
+      <!-- Package summary bar -->
+      <div id="package-summary-area" class="form-card" style="display:none;padding:14px 20px;grid-template-columns:auto auto auto auto;gap:24px;align-items:center;">
+        <div><strong style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Tender</strong><br><span id="summary-tender" style="font-weight:600;font-size:13px;color:var(--text);">-</span></div>
+        <div><strong style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Bidder Proposal</strong><br><span id="summary-bidder" style="font-weight:600;font-size:13px;color:var(--text);">-</span></div>
+        <div><strong style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Ingested Annexures</strong><br><span id="summary-annexures" style="font-weight:600;font-size:13px;color:var(--text);">None</span></div>
+        <div><strong style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Engine</strong><br><span id="summary-engine" style="font-weight:600;font-size:13px;color:var(--text);">-</span></div>
+      </div>
+
+      <!-- Loading -->
+      <div id="loading-area" class="loading-area">
+        <div class="spinner"></div>
+        <div>Running pipeline: Ingesting Package → Extracting Evidence → Cross-Document Reconciliation → NLI Verification…</div>
+      </div>
+
+      <!-- Stats strip (post-analysis) -->
+      <div id="stats-area" class="stats-strip" style="display:none;">
+        <div class="stat-mini"><div id="val-total" class="s-val">0</div><div class="s-lbl">Total Requirements</div></div>
+        <div class="stat-mini s-comp"><div id="val-comp" class="s-val">0</div><div class="s-lbl">Compliant</div></div>
+        <div class="stat-mini s-non"><div id="val-non" class="s-val">0</div><div class="s-lbl">Non-Compliant</div></div>
+        <div class="stat-mini s-unc"><div id="val-unc" class="s-val">0</div><div class="s-lbl">Uncertain / Review</div></div>
+        <div class="stat-mini s-miss"><div id="val-miss" class="s-val">0</div><div class="s-lbl">Missing Evidence</div></div>
+        <div class="stat-mini s-conf"><div id="val-conflict" class="s-val">0</div><div class="s-lbl">Cross-Doc Conflicts</div></div>
+      </div>
+
+      <!-- Clause results table (post-analysis) -->
+      <div id="results-area" class="clause-table-container" style="display:none;">
+        <div class="clause-table-header">
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:var(--text);">Clause Evaluation Results</h3>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:2px;">Detailed per-clause compliance evaluation with evidence and Phase 7 reconciliation</p>
+          </div>
+          <button class="btn-outline btn-sm" onclick="window.print()">🖨️ Print Results</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:11%;">Requirement &amp; ID</th>
+              <th style="width:20%;">Clause Specification</th>
+              <th style="width:11%;">Criteria &amp; Operator</th>
+              <th style="width:13%;">Compliance Status</th>
+              <th style="width:10%;">NLI Relation</th>
+              <th style="width:35%;">Retrieved Evidence &amp; Multi-Doc Reconciliation</th>
+            </tr>
+          </thead>
+          <tbody id="results-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW 4: CROSS-DOC CONFLICTS                           -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="view-conflicts" class="spa-view" style="display:none;">
+      <div class="page-heading">
+        <div>
+          <h1>Cross-Document Conflicts &amp; Discrepancies</h1>
+          <p>Phase 7 Multi-Document Reconciliation: Detecting and resolving conflicts between self-declared proposal claims and authoritative annexures</p>
+        </div>
+        <div class="heading-actions">
+          <button class="btn-primary" onclick="launchConflictDemo()">
+            ▶ Test Discrepancy Pipeline
+          </button>
+        </div>
+      </div>
+
+      <div class="notice-box">
+        <strong>Phase 7 Precedence Protocol:</strong> Authoritative annexures (e.g. audited financial balance sheets, statutory certificates) legally supersede unverified narrative claims found in proposal bodies.
+      </div>
+
+      <div id="conflicts-container">
+        <div class="empty-state">Loading conflict evaluations…</div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW 5: EVIDENCE LIBRARY                              -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="view-evidence" class="spa-view" style="display:none;">
+      <div class="page-heading">
+        <div>
+          <h1>Evidence &amp; Document Library</h1>
+          <p>Verified procurement repository: Tender RFPs, bidder proposal packages, and audited annexures</p>
+        </div>
+        <div class="heading-actions">
+          <button class="btn-primary" onclick="navigate('bid-analysis')">
+            + Run Analysis
+          </button>
+        </div>
+      </div>
+
+      <div class="notice-box">
+        <strong>Package Isolation Guarantee:</strong> Annexures are cryptographically isolated to their authentic bidder. Mismatched cross-bidder attachments are rejected with HTTP 400.
+      </div>
+
+      <h3 style="font-size:14px;font-weight:700;color:var(--text);margin:20px 0 12px;">📁 Authoritative Tender RFPs</h3>
+      <div id="evidence-tenders" class="cards-grid"></div>
+
+      <h3 style="font-size:14px;font-weight:700;color:var(--text);margin:24px 0 12px;">📄 Bidder Proposals &amp; Linked Packages</h3>
+      <div id="evidence-proposals" class="cards-grid"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW 6: REPORTS & ANALYSIS HISTORY                    -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="view-reports" class="spa-view" style="display:none;">
+      <div class="page-heading">
+        <div>
+          <h1>Reports &amp; Analysis History</h1>
+          <p>Human-readable procurement compliance reports and audit records retrieved from the database</p>
+        </div>
+        <div class="heading-actions">
+          <button class="btn-outline" onclick="window.print()">
+            🖨️ Print Report
+          </button>
+          <button class="btn-primary" onclick="navigate('bid-analysis')">
+            + New Analysis
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary KPI Strip for Reports -->
+      <div class="kpi-grid" id="reports-kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon blue">📊</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Total Analyses</div>
+            <div class="kpi-value" id="rep-total">—</div>
+            <div class="kpi-sub">Historical evaluations</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon green">✅</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Compliant Outcomes</div>
+            <div class="kpi-value" id="rep-compliant">—</div>
+            <div class="kpi-sub" id="rep-compliant-pct">—% of total</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon red">❌</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Non-Compliant Outcomes</div>
+            <div class="kpi-value" id="rep-non-compliant">—</div>
+            <div class="kpi-sub">Shortfalls &amp; discrepancies</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon amber">⚠️</div>
+          <div class="kpi-body">
+            <div class="kpi-label">Need Auditor Review</div>
+            <div class="kpi-value" id="rep-review">—</div>
+            <div class="kpi-sub">Uncertain &amp; missing evidence</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters & Search Toolbar -->
+      <div class="filter-toolbar">
+        <div class="filter-search">
+          <input type="text" id="report-search-input" placeholder="🔍 Search by Tender ID, Bidder Name, or Analysis ID…" oninput="filterReportsTable()">
+        </div>
+        <div class="filter-select">
+          <select id="report-status-filter" onchange="filterReportsTable()">
+            <option value="ALL">All Outcomes</option>
+            <option value="COMPLIANT">Compliant Only</option>
+            <option value="NON_COMPLIANT">Non-Compliant Only</option>
+            <option value="REVIEW">Under Review / Uncertain</option>
+          </select>
+        </div>
+        <button class="topbar-btn" onclick="loadReportsData()">🔄 Refresh</button>
+      </div>
+
+      <!-- Reports Table Card -->
+      <div class="table-card">
+        <div class="table-header">
+          <div>
+            <h3>All Recorded Evaluations</h3>
+            <p id="report-table-subtitle">Showing all analysis runs</p>
+          </div>
+        </div>
+        <div id="reports-table-container">
+          <div class="empty-state" style="padding:40px;">Loading analysis records from database…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW 7: AUDIT TRAIL                                   -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="view-audit" class="spa-view" style="display:none;">
+      <div class="page-heading">
+        <div>
+          <h1>Analysis Audit Trail &amp; Provenance Log</h1>
+          <p>Verifiable execution history, model configurations, and evidence provenance recorded in SQLite</p>
+        </div>
+      </div>
+
+      <div class="notice-box">
+        <strong>Audit Trail Architecture:</strong> Every compliance evaluation creates an immutable, timestamped record in the SQLite database (<code>backend/database/compliance_demo.db</code>). Each record archives the exact retrieval engine, NLI classification relations, and clause-level page provenance for legal auditing.
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div>
+            <h3>Chronological Audit Trail</h3>
+            <p>Complete execution trace of all procurement evaluations</p>
+          </div>
+        </div>
+        <div id="audit-table-container">
+          <div class="empty-state" style="padding:40px;">Loading audit records…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW 8: SETTINGS                                      -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="view-settings" class="spa-view" style="display:none;">
+      <div class="page-heading">
+        <div>
+          <h1>Platform &amp; Pipeline Settings</h1>
+          <p>Verified runtime configuration, active NLP models, and database parameters</p>
+        </div>
+      </div>
+
+      <div class="notice-box">
+        <strong>Runtime Safety:</strong> The parameters below represent active system components verified by the automated test suite. Pipeline models and thresholds are defined in the backend architecture and run locally on CPU without external API dependencies.
+      </div>
+
+      <div class="cards-grid" id="settings-grid">
+        <div class="doc-card">
+          <div class="doc-card-header">
+            <div class="doc-card-icon">🧠</div>
+            <div>
+              <div class="doc-card-title">NLI Verification Model</div>
+              <div style="font-size:11px;color:var(--compliant);font-weight:600;">ACTIVE (Local CPU)</div>
+            </div>
+          </div>
+          <div class="doc-card-meta">
+            <strong>Model:</strong> <code>cross-encoder/nli-distilroberta-base</code><br>
+            <strong>Classes:</strong> Entailment, Contradiction, Neutral<br>
+            <strong>Framework:</strong> PyTorch &bull; Transformers &bull; Local Cache
+          </div>
+        </div>
+
+        <div class="doc-card">
+          <div class="doc-card-header">
+            <div class="doc-card-icon">🔍</div>
+            <div>
+              <div class="doc-card-title">Semantic Search Engine</div>
+              <div style="font-size:11px;color:var(--compliant);font-weight:600;">ACTIVE (Sentence-BERT)</div>
+            </div>
+          </div>
+          <div class="doc-card-meta">
+            <strong>Model:</strong> <code>all-MiniLM-L6-v2</code><br>
+            <strong>Dimensions:</strong> 384-dimensional dense vectors<br>
+            <strong>Similarity Metric:</strong> Cosine similarity
+          </div>
+        </div>
+
+        <div class="doc-card">
+          <div class="doc-card-header">
+            <div class="doc-card-icon">📐</div>
+            <div>
+              <div class="doc-card-title">Numeric &amp; Boundary Scoring</div>
+              <div style="font-size:11px;color:var(--compliant);font-weight:600;">DETERMINISTIC</div>
+            </div>
+          </div>
+          <div class="doc-card-meta">
+            <strong>Comparators:</strong> &gt;=, &lt;=, == mathematical evaluation<br>
+            <strong>Unit Normalization:</strong> USD M/K, Gbps/Mbps, Years/Months<br>
+            <strong>Rule:</strong> Never equates similarity with compliance
+          </div>
+        </div>
+
+        <div class="doc-card">
+          <div class="doc-card-header">
+            <div class="doc-card-icon">🔄</div>
+            <div>
+              <div class="doc-card-title">Phase 7 Cross-Doc Reconciler</div>
+              <div style="font-size:11px;color:var(--compliant);font-weight:600;">AUTHORITATIVE PRECEDENCE</div>
+            </div>
+          </div>
+          <div class="doc-card-meta">
+            <strong>Protocol:</strong> Audited annexures supersede self-claims<br>
+            <strong>Isolation Filter:</strong> Strict cross-bidder isolation (HTTP 400)<br>
+            <strong>Provenance:</strong> Exact source document &amp; page tracing
+          </div>
+        </div>
+
+        <div class="doc-card">
+          <div class="doc-card-header">
+            <div class="doc-card-icon">💾</div>
+            <div>
+              <div class="doc-card-title">Relational Persistence</div>
+              <div style="font-size:11px;color:var(--compliant);font-weight:600;">SQLITE DATABASE</div>
+            </div>
+          </div>
+          <div class="doc-card-meta">
+            <strong>Database File:</strong> <code>backend/database/compliance_demo.db</code><br>
+            <strong>Schema:</strong> Analyses &bull; Clause Evaluations &bull; Audit Trails<br>
+            <strong>Mode:</strong> ACID-compliant WAL persistence
+          </div>
+        </div>
+
+        <div class="doc-card">
+          <div class="doc-card-header">
+            <div class="doc-card-icon">🛡️</div>
+            <div>
+              <div class="doc-card-title">GeM Procurement Rules</div>
+              <div style="font-size:11px;color:var(--compliant);font-weight:600;">ACTIVE</div>
+            </div>
+          </div>
+          <div class="doc-card-meta">
+            <strong>Mandatory Shortfalls:</strong> Auto-flags disqualification risk<br>
+            <strong>Outcome States:</strong> COMPLIANT, NON_COMPLIANT, UNCERTAIN, MISSING_EVIDENCE<br>
+            <strong>Auditor Oversight:</strong> Human-in-the-loop validation
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Disclaimer ── -->
+    <div class="disclaimer">
+      <strong>Academic / Demo Notice:</strong> This platform integrates deterministic rule checks, mathematical boundary evaluation, Sentence-BERT semantic retrieval, local CPU Natural Language Inference (cross-encoder/nli-distilroberta-base), and Phase 7 cross-document reconciliation between proposals and audited annexures. Official procurement decisions require human auditor validation.
+    </div>
+
+  </main>
+</div><!-- end #main -->
+
+<!-- ═══════════ ANALYSIS DETAILS MODAL ═══════════ -->
+<div id="report-detail-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeModal();">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h3 id="modal-title" style="font-size:16px;font-weight:800;color:var(--text);">Analysis Details</h3>
+        <p id="modal-subtitle" style="font-size:12px;color:var(--text-muted);margin-top:2px;">Itemized clause evaluation &amp; provenance audit</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="btn-outline btn-sm" onclick="printModal()">🖨️ Print</button>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="modal-content">
+      <div class="empty-state">Loading analysis details…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   TenderIQ SPA Dashboard & Reports Engine
+   Functional hash routing, readable Reports view, real API data.
+   Preserves all existing IDs, functions, and test contracts.
+═══════════════════════════════════════════════════════════════ */
+
+let packageMapping = {};
+let allAnnexures   = [];
+let cachedAnalyses = [];
+let cachedTenders   = [];
+let cachedPackages  = {};
+
+/* ── helpers ── */
+function pct(part, total){ return total > 0 ? ((part/total)*100).toFixed(0)+'%' : '0%'; }
+function fmtDate(iso){
+  if(!iso) return '—';
+  try{
+    const d=new Date(iso.replace(' ','T'));
+    return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
+      +', '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
+  }catch(e){ return iso; }
+}
+function labelBadge(lbl){
+  const cls={'COMPLIANT':'compliant','NON_COMPLIANT':'non_compliant',
+             'UNCERTAIN':'uncertain','MISSING_EVIDENCE':'missing_evidence'};
+  return `<span class="badge ${cls[lbl]||'missing_evidence'}">${(lbl||'').replace('_',' ')}</span>`;
+}
+function overallBadge(status){
+  if(!status) return '<span class="badge missing_evidence">—</span>';
+  if(status.includes('COMPLIANT_PRELIMINARY') || status === 'COMPLIANT') return '<span class="badge compliant">Compliant</span>';
+  if(status.includes('DISCREPANCIES') || status.includes('NON_COMPLIANT')) return '<span class="badge non_compliant">Non-Compliant</span>';
+  return `<span class="badge uncertain" title="${status}">Review</span>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SPA ROUTING
+═══════════════════════════════════════════════════════════════ */
+const ROUTES = {
+  'overview':     { title: 'Overview',                sectionId: 'view-overview',      navId: 'nav-overview' },
+  'tenders':      { title: 'Tenders',                 sectionId: 'view-tenders',       navId: 'nav-tenders' },
+  'bid-analysis': { title: 'Bid Analysis Workbench',  sectionId: 'view-bid-analysis',  navId: 'nav-bid-analysis' },
+  'conflicts':    { title: 'Cross-Doc Conflicts',     sectionId: 'view-conflicts',     navId: 'nav-conflicts' },
+  'evidence':     { title: 'Evidence Library',        sectionId: 'view-evidence',      navId: 'nav-evidence' },
+  'reports':      { title: 'Reports & History',       sectionId: 'view-reports',       navId: 'nav-reports' },
+  'audit':        { title: 'Audit Trail',             sectionId: 'view-audit',         navId: 'nav-audit' },
+  'settings':     { title: 'Platform Settings',       sectionId: 'view-settings',      navId: 'nav-settings' },
+};
+
+function navigate(targetRoute){
+  const route = ROUTES[targetRoute] ? targetRoute : 'overview';
+  window.location.hash = '#' + route;
+
+  // Hide all sections
+  document.querySelectorAll('.spa-view').forEach(s => s.style.display = 'none');
+
+  // Show active section
+  const targetSection = document.getElementById(ROUTES[route].sectionId);
+  if(targetSection) targetSection.style.display = 'block';
+
+  // Update sidebar active class
+  document.querySelectorAll('.sb-item').forEach(item => item.classList.remove('active'));
+  const activeNavItem = document.getElementById(ROUTES[route].navId);
+  if(activeNavItem) activeNavItem.classList.add('active');
+
+  // Update topbar breadcrumb
+  const breadcrumb = document.getElementById('breadcrumb-current');
+  if(breadcrumb) breadcrumb.textContent = ROUTES[route].title;
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Route-specific data refresh
+  if(route === 'reports') loadReportsData();
+  else if(route === 'tenders') renderTendersView();
+  else if(route === 'conflicts') renderConflictsView();
+  else if(route === 'evidence') renderEvidenceView();
+  else if(route === 'audit') renderAuditView();
+}
+
+window.addEventListener('hashchange', () => {
+  const hash = window.location.hash.replace('#', '') || 'overview';
+  navigate(hash);
+});
+
+/* ── 1. Load system health ── */
+async function loadHealth(){
+  try{
+    const h = await fetch('/api/health').then(r=>r.json());
+    const setStatus = (id, txtId, ok) => {
+      const dot = document.querySelector(`#${id} .dot`);
+      const txt = document.getElementById(txtId);
+      if(dot){ dot.style.background = ok ? '#16A34A' : '#F59E0B'; }
+      if(txt){ txt.textContent = ok ? 'Online' : 'Limited'; txt.style.color = ok ? '#16A34A' : '#F59E0B'; }
+    };
+    setStatus('stat-nlp',        'nlp-status-text',        true);
+    setStatus('stat-semantic',   'semantic-status-text',   h.semantic_retriever?.available);
+    setStatus('stat-nli',        'nli-status-text',        h.nli_classifier?.available);
+    setStatus('stat-reconciler', 'reconciler-status-text', h.cross_doc_reconciler?.available);
+  }catch(e){ console.warn('Health check failed', e); }
+}
+
+/* ── 2. Load dashboard KPI stats & overview ── */
+async function loadDashboardStats(){
+  try{
+    const s = await fetch('/api/dashboard-stats').then(r=>r.json());
+
+    document.getElementById('kpi-analyses').textContent     = s.total_analyses;
+    document.getElementById('kpi-analyses-sub').textContent = s.total_analyses === 1 ? '1 tender evaluated' : `${s.total_analyses} tenders evaluated`;
+    document.getElementById('kpi-bidders').textContent      = s.unique_bidders;
+    document.getElementById('kpi-bidders-sub').textContent  = `${s.unique_bidders} unique bidders`;
+    document.getElementById('kpi-review').textContent       = s.need_review;
+    document.getElementById('kpi-review-sub').textContent   = 'Uncertain + missing evidence';
+    document.getElementById('kpi-conflicts').textContent    = s.cross_doc_conflicts;
+    document.getElementById('kpi-conflicts-sub').textContent= 'Phase 7 cross-doc conflicts';
+
+    const badge = document.getElementById('conflict-nav-badge');
+    if(s.cross_doc_conflicts > 0){
+      badge.textContent = s.cross_doc_conflicts;
+      badge.style.display = '';
+    }
+
+    const total = s.total_clauses;
+    if(total > 0){
+      const c=s.compliant_count, nc=s.non_compliant_count, u=s.uncertain_count, m=s.missing_evidence_count;
+      const cp=pct(c,total), np=pct(nc,total), up=pct(u,total), mp=pct(m,total);
+
+      document.getElementById('seg-comp').style.width  = cp;
+      document.getElementById('seg-non').style.width   = np;
+      document.getElementById('seg-unc').style.width   = up;
+      document.getElementById('seg-miss').style.width  = mp;
+
+      document.getElementById('seg-comp').textContent  = cp;
+      document.getElementById('seg-non').textContent   = np;
+      document.getElementById('seg-unc').textContent   = up;
+      document.getElementById('seg-miss').textContent  = mp;
+
+      document.getElementById('leg-comp-pct').textContent  = cp;
+      document.getElementById('leg-non-pct').textContent   = np;
+      document.getElementById('leg-unc-pct').textContent   = up;
+      document.getElementById('leg-miss-pct').textContent  = mp;
+
+      document.getElementById('leg-comp-count').textContent  = `${c} clauses`;
+      document.getElementById('leg-non-count').textContent   = `${nc} clauses`;
+      document.getElementById('leg-unc-count').textContent   = `${u} clauses`;
+      document.getElementById('leg-miss-count').textContent  = `${m} clauses`;
+      document.getElementById('dist-bar-container').style.display = '';
+      document.getElementById('no-data-overview').style.display = 'none';
+    } else {
+      document.getElementById('dist-bar-container').style.display = 'none';
+      document.getElementById('no-data-overview').style.display = '';
+    }
+
+    renderReviewQueue(s.review_queue);
+    renderRecentAnalyses(s.recent_analyses);
+
+  }catch(e){ console.error('Dashboard stats error', e); }
+}
+
+/* ── 3. Render review queue ── */
+function renderReviewQueue(items){
+  const el = document.getElementById('review-queue-list');
+  if(!items || items.length === 0){
+    el.innerHTML = '<div class="empty-state" style="padding:24px 0;">No review items found. All clauses resolved or no runs recorded yet.</div>';
+    return;
+  }
+  const iconMap={'NON_COMPLIANT':'red-icon','UNCERTAIN':'amber-icon','MISSING_EVIDENCE':'slate-icon'};
+  const emojiMap={'NON_COMPLIANT':'📄','UNCERTAIN':'📋','MISSING_EVIDENCE':'📝'};
+  el.innerHTML = items.map(item => {
+    const tenderShort = (item.tender_filename||'').replace('.pdf','').replace('TENDER-','');
+    const reqShort = (item.requirement_text||'').substring(0,55) + (item.requirement_text?.length > 55 ? '…' : '');
+    const iconCls = iconMap[item.label] || 'slate-icon';
+    const emoji   = emojiMap[item.label] || '📝';
+    const sevText = item.cross_doc_conflict ? 'High' : (item.severity || 'Medium');
+    const sevCls  = sevText === 'High' ? 'high' : (sevText === 'Medium' ? 'medium' : 'low');
+    return `
+      <div class="queue-item" onclick="viewAnalysisDetails('${item.analysis_id}')" title="Click to view full analysis details">
+        <div class="queue-doc-icon ${iconCls}">${emoji}</div>
+        <div class="queue-info">
+          <div class="queue-tender">${tenderShort} &bull; ${item.requirement_id}</div>
+          <div class="queue-req">${reqShort}</div>
+        </div>
+        <div class="queue-right">
+          ${labelBadge(item.label)}
+          <span class="severity-badge">
+            <span class="sev-bar ${sevCls}" style="height:10px;"></span>
+            ${sevText}
+          </span>
+        </div>
+        <span class="queue-chevron">›</span>
+      </div>`;
+  }).join('');
+}
+
+/* ── 4. Render recent analyses table ── */
+function renderRecentAnalyses(analyses){
+  const el = document.getElementById('recent-table-container');
+  if(!analyses || analyses.length === 0){
+    el.innerHTML = '<div class="empty-state" style="padding:40px;">No analyses recorded yet. Run your first bid analysis in Bid Analysis.</div>';
+    return;
+  }
+  const rows = analyses.map(a => {
+    const tenderShort = (a.tender_filename||'').replace('.pdf','');
+    const bidderShort = (a.bidder_filename||'').replace('.pdf','');
+    return `
+      <tr>
+        <td class="td-tender">${tenderShort}</td>
+        <td class="td-bidder">${bidderShort}</td>
+        <td class="td-num">${a.total_requirements||0}</td>
+        <td class="td-num c">${a.compliant_count||0}</td>
+        <td class="td-num nc">${a.non_compliant_count||0}</td>
+        <td class="td-num u">${a.uncertain_count||0}</td>
+        <td class="td-num conf">${a.cross_doc_conflicts || '—'}</td>
+        <td>${overallBadge(a.overall_status)}</td>
+        <td class="td-date">${fmtDate(a.created_at)}</td>
+        <td class="td-actions">
+          <button class="act-btn" onclick="viewAnalysisDetails('${a.id}')">View Details →</button>
+        </td>
+      </tr>`;
+  }).join('');
+  el.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Tender ID</th>
+          <th>Bidder Package</th>
+          <th style="text-align:right;">Clauses</th>
+          <th style="text-align:right;">Compliant</th>
+          <th style="text-align:right;">Non-Compliant</th>
+          <th style="text-align:right;">Uncertain</th>
+          <th style="text-align:right;">Conflicts</th>
+          <th>Overall Outcome</th>
+          <th>Last Updated</th>
+          <th style="text-align:right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+/* ── 5. Render Cross-Document Intelligence panel ── */
+function renderXdocPanel(evaluations, data){
+  const conflictEv = (evaluations||[]).find(ev => ev.cross_doc_conflict);
+  const panel      = document.getElementById('xdoc-panel');
+  const body       = document.getElementById('xdoc-body');
+  const subText    = document.getElementById('xdoc-sub-text');
+  const alertIcon  = document.getElementById('xdoc-alert-icon');
+
+  if(!conflictEv){
+    panel.className = 'xdoc-card no-conflict';
+    alertIcon.textContent = '✅';
+    alertIcon.style.background = '#F0FDF4';
+    subText.textContent = 'No cross-document conflicts detected in this run';
+    body.innerHTML = `<div class="xdoc-empty">
+      <div style="font-size:36px;margin-bottom:8px;">✅</div>
+      <div>All narrative claims align with authoritative annexures. No Phase 7 multi-document discrepancies found.</div>
+    </div>`;
+    return;
+  }
+
+  panel.className = 'xdoc-card';
+  alertIcon.textContent = '⚠️';
+  alertIcon.style.background = '#FEE2E2';
+  subText.textContent = 'Conflicting information detected across bidder documents';
+
+  const ev = conflictEv;
+  const primVal  = ev.cross_doc_primary_value != null ? `$${ev.cross_doc_primary_value}M` : 'Narrative Claim';
+  const authVal  = ev.cross_doc_authoritative_value != null ? `$${ev.cross_doc_authoritative_value}M` : 'Audited Metric';
+  const reqThresh = ev.required_value != null ? `${ev.operator||'>='} ${ev.required_value} ${ev.required_unit||''}`.trim() : '—';
+  const primSrc  = ev.cross_doc_primary_source || (data?.bidder_document||'Proposal');
+  const authSrc  = ev.cross_doc_authoritative_source || 'Annexure';
+  const authPage = ev.cross_doc_authoritative_page || 1;
+  const primaryPage = ev.top_evidence_page || 1;
+  const isCompliant  = ev.label === 'COMPLIANT';
+  const assessCls    = isCompliant ? 'assessment compliant-assess' : 'assessment';
+
+  body.innerHTML = `
+    <div class="xdoc-body">
+      <div class="xdoc-col">
+        <div class="xdoc-col-label">Proposal Claim</div>
+        <div class="xdoc-inner proposal">
+          <div class="xdoc-file" title="${primSrc}">📄 ${primSrc}</div>
+          <div class="xdoc-page">Page ${primaryPage}</div>
+          <div class="xdoc-value">${primVal}</div>
+          <div class="xdoc-desc">Claimed value in proposal narrative</div>
+        </div>
+      </div>
+      <div class="xdoc-arrow">⇄</div>
+      <div class="xdoc-col">
+        <div class="xdoc-col-label">Audited Annexure</div>
+        <div class="xdoc-inner annexure">
+          <div class="xdoc-file" title="${authSrc}">📁 ${authSrc}</div>
+          <div class="xdoc-page">Page ${authPage}</div>
+          <div class="xdoc-value auth">${authVal}</div>
+          <div class="xdoc-desc">Authoritative audited figure</div>
+        </div>
+      </div>
+      <div class="xdoc-arrow">→</div>
+      <div class="xdoc-col">
+        <div class="xdoc-col-label">Tender Requirement</div>
+        <div class="xdoc-inner requirement">
+          <div class="xdoc-file">${ev.category||'Requirement'}</div>
+          <div class="xdoc-page">${ev.requirement_id||''}</div>
+          <div class="xdoc-value req">${reqThresh}</div>
+          <div class="xdoc-desc">${(ev.requirement_text||'').substring(0,60)}</div>
+        </div>
+      </div>
+      <div class="xdoc-arrow">→</div>
+      <div class="xdoc-col">
+        <div class="xdoc-col-label">Final Assessment</div>
+        <div class="xdoc-inner ${assessCls}">
+          <div class="xdoc-assess-label">${labelBadge(ev.label)}</div>
+          <div style="margin-top:6px;">${ev.cross_doc_conflict ? '<span class="badge conflict">CROSS-DOCUMENT CONFLICT</span>' : ''}</div>
+          <div class="xdoc-reasoning">${(ev.cross_doc_reasoning || ev.reasoning || '').substring(0,140)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── 6. Load documents ── */
+async function loadDocuments(){
+  try{
+    const [tendersRes, packagesRes] = await Promise.all([
+      fetch('/api/documents/tenders'),
+      fetch('/api/documents/packages')
+    ]);
+    cachedTenders  = await tendersRes.json();
+    cachedPackages = await packagesRes.json();
+
+    const tenderSelect = document.getElementById('select-tender');
+    if(tenderSelect){
+      tenderSelect.innerHTML = cachedTenders.map(t=>`<option value="${t}">${t}</option>`).join('');
+    }
+
+    const bidderSelect = document.getElementById('select-bidder');
+    if(bidderSelect){
+      bidderSelect.innerHTML = (cachedPackages.proposals||[]).map(b=>`<option value="${b}">${b}</option>`).join('');
+    }
+
+    packageMapping = cachedPackages.package_mapping || {};
+    allAnnexures   = cachedPackages.annexures || [];
+
+    onBidderSelectionChanged();
+  }catch(err){ console.error('Error loading documents:', err); }
+}
+
+/* ── 7. onBidderSelectionChanged ── */
+function onBidderSelectionChanged(){
+  const bidder    = document.getElementById('select-bidder')?.value;
+  const container = document.getElementById('annexure-selection-container');
+  if(!container) return;
+  const associated= packageMapping[bidder] || [];
+
+  if(associated.length === 0){
+    container.innerHTML = '<span style="color:var(--text-muted);font-size:11px;">No annexures linked for this bidder (Single PDF)</span>';
+    return;
+  }
+  container.innerHTML = associated.map((ann,idx)=>`
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text);font-size:11px;">
+      <input type="checkbox" id="chk-ann-${idx}" value="${ann}" checked>
+      <span>${ann}</span>
+      <span class="badge-pkg">Linked Annexure</span>
+    </label>`).join('');
+}
+
+/* ── 8. runAnalysis ── */
+async function runAnalysis(){
+  const tender     = document.getElementById('select-tender').value;
+  const bidder     = document.getElementById('select-bidder').value;
+  const retriever  = document.getElementById('select-retriever').value;
+  const enableNli  = document.getElementById('select-nli').value === 'true';
+  const btn        = document.getElementById('btn-run');
+
+  const checkedAnnexures = Array.from(
+    document.querySelectorAll('#annexure-selection-container input[type="checkbox"]:checked')
+  ).map(cb => cb.value);
+
+  btn.disabled = true;
+  document.getElementById('loading-area').style.display  = 'block';
+  document.getElementById('package-summary-area').style.display = 'none';
+  document.getElementById('stats-area').style.display   = 'none';
+  document.getElementById('results-area').style.display = 'none';
+
+  try{
+    const res = await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        tender_filename:    tender,
+        bidder_filename:    bidder,
+        annexure_filenames: checkedAnnexures,
+        retrieval_method:   retriever,
+        enable_nli:         enableNli
+      })
+    });
+    if(!res.ok){
+      const errData = await res.json();
+      throw new Error(errData.detail || 'Analysis request failed');
+    }
+    const data = await res.json();
+    displayResults(data);
+
+    // Refresh dashboard stats & overview
+    loadDashboardStats();
+    renderXdocPanel(data.evaluations || [], data);
+
+  }catch(err){
+    alert('Analysis error: ' + err.message);
+  }finally{
+    btn.disabled = false;
+    document.getElementById('loading-area').style.display = 'none';
+  }
+}
+
+/* ── 9. displayResults ── */
+function displayResults(data){
+  document.getElementById('summary-tender').innerText = data.tender_document;
+  document.getElementById('summary-bidder').innerText = data.bidder_document;
+  const annexuresText = (data.annexure_documents && data.annexure_documents.length > 0)
+    ? data.annexure_documents.join(', ')
+    : 'None (Single-Proposal Mode)';
+  document.getElementById('summary-annexures').innerText = annexuresText;
+  document.getElementById('summary-engine').innerText = `${data.retrieval_method} | NLI: ${data.nli_enabled ? 'ON' : 'OFF'}`;
+  document.getElementById('package-summary-area').style.display = 'grid';
+
+  let conflictCount = 0;
+  (data.evaluations||[]).forEach(ev => { if(ev.cross_doc_conflict) conflictCount++; });
+
+  document.getElementById('val-total').innerText    = data.total_requirements;
+  document.getElementById('val-comp').innerText     = data.compliant_count;
+  document.getElementById('val-non').innerText      = data.non_compliant_count;
+  document.getElementById('val-unc').innerText      = data.uncertain_count;
+  document.getElementById('val-miss').innerText     = data.missing_evidence_count;
+  document.getElementById('val-conflict').innerText = conflictCount;
+  document.getElementById('stats-area').style.display = 'grid';
+
+  const tbody = document.getElementById('results-tbody');
+  tbody.innerHTML = '';
+
+  (data.evaluations||[]).forEach(ev => {
+    const tr        = document.createElement('tr');
+    const badgeCls  = {'COMPLIANT':'compliant','NON_COMPLIANT':'non_compliant','UNCERTAIN':'uncertain','MISSING_EVIDENCE':'missing_evidence'};
+    const bCls      = badgeCls[ev.label] || 'missing_evidence';
+
+    let thresholdStr = '—';
+    if(ev.required_value !== null && ev.required_value !== undefined){
+      thresholdStr = `${ev.operator||'>='} ${ev.required_value} ${ev.required_unit||''}`;
+    }
+
+    let statusColHtml = `<span class="badge ${bCls}">${ev.label.replace('_',' ')}</span>`;
+    if(ev.cross_doc_conflict){
+      statusColHtml += `<div style="margin-top:5px;"><span class="badge conflict">CROSS-DOCUMENT CONFLICT</span></div>`;
+    }
+
+    let nliHtml = '<span class="badge missing_evidence">N/A</span>';
+    if(ev.nli_relation){
+      const rel  = ev.nli_relation.toLowerCase();
+      const nliC = {'entailment':'compliant','contradiction':'non_compliant','neutral':'missing_evidence'};
+      let prob=0;
+      if(rel==='entailment') prob=ev.nli_entailment_prob;
+      else if(rel==='contradiction') prob=ev.nli_contradiction_prob;
+      else if(rel==='neutral') prob=ev.nli_neutral_prob;
+      const probStr=(prob!=null)?` (${(prob*100).toFixed(0)}%)`:'';
+      nliHtml=`<span class="badge ${nliC[rel]||'missing_evidence'}">${ev.nli_relation.toUpperCase()}${probStr}</span>`;
+    } else if(data.nli_enabled===false){
+      nliHtml='<span class="badge missing_evidence" title="NLI Disabled">OFF</span>';
+    }
+
+    let evidenceHtml = '<em style="color:var(--text-muted);font-size:12px;">No relevant statement submitted.</em>';
+    if(ev.top_evidence_sentence){
+      let candidatesListHtml='';
+      if(ev.candidates && ev.candidates.length>1){
+        candidatesListHtml=`
+          <details style="margin-top:8px;font-size:11px;color:var(--text-muted);cursor:pointer;">
+            <summary>View all top-${ev.candidates.length} evidence candidates</summary>
+            <div style="margin-top:6px;padding:6px 10px;background:var(--bg);border-left:2px solid var(--border);border-radius:4px;">
+              ${ev.candidates.map(c=>`
+                <div style="margin-top:4px;font-size:11px;border-bottom:1px solid var(--border);padding-bottom:4px;">
+                  <strong style="color:var(--primary);">#${c.rank}</strong>
+                  (${(c.similarity_score*100).toFixed(1)}% | ${c.source_document||c.source_file||'doc'} p.${c.page_number||1}):
+                  "${c.sentence}"
+                </div>`).join('')}
+            </div>
+          </details>`;
+      }
+
+      let conflictCardHtml='';
+      if(ev.cross_doc_conflict){
+        const primValStr=(ev.cross_doc_primary_value!=null)?`$${ev.cross_doc_primary_value}M`:'Narrative Claim';
+        const authValStr=(ev.cross_doc_authoritative_value!=null)?`$${ev.cross_doc_authoritative_value}M`:'Audited Metric';
+        conflictCardHtml=`
+          <div class="conflict-card">
+            <div style="font-weight:700;color:var(--non-compliant);display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">
+              ⚠ Cross-Document Discrepancy (${ev.cross_doc_conflict_severity||'HIGH'} Severity)
+            </div>
+            <div class="conflict-grid">
+              <div class="conflict-src">
+                <span style="color:var(--text-muted);">Primary Claim (${ev.cross_doc_primary_source||'Proposal'}):</span><br>
+                <strong style="font-size:12px;">${primValStr}</strong>
+              </div>
+              <div class="conflict-src auth">
+                <span style="color:var(--non-compliant);">Authoritative (${ev.cross_doc_authoritative_source||'Annexure'} p.${ev.cross_doc_authoritative_page||1}):</span><br>
+                <strong style="font-size:12px;color:var(--non-compliant);">${authValStr}</strong>
+              </div>
+            </div>
+            <div class="conflict-reasoning"><strong>Provenance Audit:</strong> ${ev.cross_doc_reasoning||'Discrepancy detected between narrative proposal claim and authoritative annexure.'}</div>
+          </div>`;
+      }
+
+      evidenceHtml=`
+        <div class="ev-box">
+          "${ev.top_evidence_sentence}"
+          <div class="ev-meta">
+            <span>Doc: <strong>${ev.top_evidence_source}</strong></span>
+            <span>Page: <strong>${ev.top_evidence_page||1}</strong></span>
+            <span>Engine: <strong>${ev.retrieval_method||'N/A'}</strong></span>
+            <span>Sim: <strong>${(ev.top_similarity_score*100).toFixed(1)}%</strong></span>
+            ${ev.has_negation?'<span style="color:var(--non-compliant);font-weight:600;">[NEGATION DETECTED]</span>':''}
+          </div>
+          ${candidatesListHtml}
+        </div>
+        ${conflictCardHtml}
+        <div class="reasoning-box"><strong>Audit Rationale:</strong> ${ev.reasoning}</div>`;
+    } else {
+      evidenceHtml += `<div class="reasoning-box" style="color:var(--text-muted);"><strong>Audit Rationale:</strong> ${ev.reasoning}</div>`;
+    }
+
+    tr.innerHTML=`
+      <td>
+        <strong style="font-size:12px;">${ev.requirement_id}</strong><br>
+        <span style="font-size:11px;color:var(--text-muted);">${ev.category}</span>
+      </td>
+      <td style="font-size:12px;">${ev.requirement_text}
+        ${ev.is_mandatory?'<br><span style="font-size:10px;color:var(--non-compliant);font-weight:600;">MANDATORY</span>':'<br><span style="font-size:10px;color:var(--text-muted);">OPTIONAL</span>'}
+      </td>
+      <td>
+        <strong style="font-size:12px;">${ev.parameter}</strong><br>
+        <span style="font-size:11px;color:var(--primary);">${thresholdStr}</span>
+      </td>
+      <td>${statusColHtml}</td>
+      <td>${nliHtml}</td>
+      <td>${evidenceHtml}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('results-area').style.display='block';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REPORTS VIEW LOGIC
+═══════════════════════════════════════════════════════════════ */
+async function loadReportsData(){
+  const container = document.getElementById('reports-table-container');
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div>Loading analysis records from database…</div>';
+
+  try{
+    const res = await fetch('/api/analyses');
+    if(!res.ok) throw new Error('Failed to retrieve analysis records');
+    cachedAnalyses = await res.json();
+
+    // Calculate Summary Metrics
+    const total = cachedAnalyses.length;
+    let compCount = 0;
+    let nonCompCount = 0;
+    let reviewCount = 0;
+
+    cachedAnalyses.forEach(a => {
+      const st = a.overall_status || '';
+      if(st.includes('COMPLIANT_PRELIMINARY') || st === 'COMPLIANT') compCount++;
+      else if(st.includes('DISCREPANCIES') || st.includes('NON_COMPLIANT')) nonCompCount++;
+      else reviewCount++;
+    });
+
+    document.getElementById('rep-total').textContent = total;
+    document.getElementById('rep-compliant').textContent = compCount;
+    document.getElementById('rep-compliant-pct').textContent = `${pct(compCount, total)} of total`;
+    document.getElementById('rep-non-compliant').textContent = nonCompCount;
+    document.getElementById('rep-review').textContent = reviewCount;
+
+    filterReportsTable();
+
+  }catch(err){
+    container.innerHTML = `<div class="empty-state" style="color:var(--non-compliant);">
+      <div style="font-size:28px;margin-bottom:8px;">⚠️</div>
+      <strong>Error loading reports:</strong> ${err.message}
+    </div>`;
+  }
+}
+
+function filterReportsTable(){
+  const query = (document.getElementById('report-search-input')?.value || '').toLowerCase();
+  const filter = document.getElementById('report-status-filter')?.value || 'ALL';
+  const container = document.getElementById('reports-table-container');
+
+  let filtered = cachedAnalyses.filter(a => {
+    // Search filter
+    const matchSearch = !query ||
+      (a.tender_filename||'').toLowerCase().includes(query) ||
+      (a.bidder_filename||'').toLowerCase().includes(query) ||
+      (a.bidder_name||'').toLowerCase().includes(query) ||
+      (a.id||'').toLowerCase().includes(query);
+
+    // Status filter
+    let matchStatus = true;
+    const st = a.overall_status || '';
+    if(filter === 'COMPLIANT') matchStatus = st.includes('COMPLIANT_PRELIMINARY') || st === 'COMPLIANT';
+    else if(filter === 'NON_COMPLIANT') matchStatus = st.includes('DISCREPANCIES') || st.includes('NON_COMPLIANT');
+    else if(filter === 'REVIEW') matchStatus = !st.includes('COMPLIANT_PRELIMINARY') && !st.includes('DISCREPANCIES') && st !== 'COMPLIANT';
+
+    return matchSearch && matchStatus;
+  });
+
+  const subtitle = document.getElementById('report-table-subtitle');
+  if(subtitle) subtitle.textContent = `Showing ${filtered.length} of ${cachedAnalyses.length} analysis records`;
+
+  if(filtered.length === 0){
+    container.innerHTML = '<div class="empty-state">No matching analysis reports found. Adjust search or filters.</div>';
+    return;
+  }
+
+  const rows = filtered.map(a => {
+    const hasConflict = a.non_compliant_count > 0 && (a.annexure_documents?.length > 0);
+    const conflictTag = hasConflict
+      ? '<span class="badge conflict">Phase 7 Discrepancy</span>'
+      : (a.mandatory_shortfalls_count > 0 ? `<span class="badge non_compliant">${a.mandatory_shortfalls_count} Shortfalls</span>` : '<span style="color:var(--text-muted);font-size:11px;">Consistent</span>');
+
+    return `
+      <tr>
+        <td class="td-date">${fmtDate(a.created_at)}</td>
+        <td class="td-tender"><strong>${(a.tender_filename||'').replace('.pdf','')}</strong></td>
+        <td class="td-bidder">
+          <strong>${(a.bidder_filename||'').replace('.pdf','')}</strong>
+          ${a.annexure_documents?.length ? `<br><span style="font-size:10px;color:var(--primary);">+ ${a.annexure_documents.length} Annexure(s)</span>` : ''}
+        </td>
+        <td class="td-num">${a.total_requirements||0}</td>
+        <td class="td-num c">${a.compliant_count||0}</td>
+        <td class="td-num nc">${a.non_compliant_count||0}</td>
+        <td class="td-num u">${a.uncertain_count||0}</td>
+        <td class="td-num" style="color:var(--missing);">${a.missing_evidence_count||0}</td>
+        <td>${overallBadge(a.overall_status)}</td>
+        <td>${conflictTag}</td>
+        <td class="td-actions">
+          <button class="act-btn" onclick="viewAnalysisDetails('${a.id}')">View Details →</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Date &amp; Time</th>
+          <th>Tender RFP</th>
+          <th>Bidder &amp; Package</th>
+          <th style="text-align:right;">Total</th>
+          <th style="text-align:right;">Compliant</th>
+          <th style="text-align:right;">Non-Compliant</th>
+          <th style="text-align:right;">Uncertain</th>
+          <th style="text-align:right;">Missing</th>
+          <th>Outcome</th>
+          <th>Discrepancy</th>
+          <th style="text-align:right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+/* ── 10. View Analysis Details (Modal) ── */
+async function viewAnalysisDetails(analysisId){
+  const modal = document.getElementById('report-detail-modal');
+  const title = document.getElementById('modal-title');
+  const subtitle = document.getElementById('modal-subtitle');
+  const content = document.getElementById('modal-content');
+
+  modal.style.display = 'flex';
+  title.textContent = `Analysis Details — ${analysisId}`;
+  subtitle.textContent = 'Loading from database…';
+  content.innerHTML = '<div class="empty-state"><div class="spinner"></div>Fetching itemized evaluation from /api/analyses/' + analysisId + '…</div>';
+
+  try{
+    const res = await fetch(`/api/analyses/${analysisId}`);
+    if(!res.ok) throw new Error('Analysis record not found');
+    const a = await res.json();
+
+    title.textContent = `${(a.bidder_filename||'Bidder').replace('.pdf','')} vs ${(a.tender_filename||'Tender').replace('.pdf','')}`;
+    subtitle.textContent = `Analysis ID: ${a.id} &bull; Recorded on ${fmtDate(a.created_at)} &bull; Engine: ${a.retrieval_method||'Sentence-BERT'} &bull; NLI: ${a.nli_enabled ? 'ON' : 'OFF'}`;
+
+    let conflictHtml = '';
+    const conflicts = (a.evaluations||[]).filter(ev => ev.cross_doc_conflict);
+    if(conflicts.length > 0){
+      conflictHtml = `
+        <div class="xdoc-card" style="margin-bottom:20px;">
+          <div class="xdoc-header">
+            <div class="xdoc-header-left">
+              <div class="xdoc-alert-icon">⚠️</div>
+              <div>
+                <div class="xdoc-title">Phase 7 Cross-Document Conflict Detected</div>
+                <div class="xdoc-sub">Discrepancy found between narrative proposal claims and authoritative audited annexures</div>
+              </div>
+            </div>
+            <span class="phase7-ribbon">Phase 7: Multi-Document Reconciliation</span>
+          </div>
+          <div class="panel-body" style="padding:14px 20px;">
+            ${conflicts.map(c => `
+              <div style="font-size:12px;margin-bottom:8px;">
+                <strong>${c.requirement_id} (${c.parameter}):</strong> Narrative claim was <strong>$${c.cross_doc_primary_value}M</strong>, but authoritative audited annexure (${c.cross_doc_authoritative_source} p.${c.cross_doc_authoritative_page||1}) confirms <strong>$${c.cross_doc_authoritative_value}M</strong>.
+                <div style="margin-top:4px;color:#B91C1C;"><strong>Provenance Rationale:</strong> ${c.cross_doc_reasoning || c.reasoning}</div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    const rows = (a.evaluations||[]).map(ev => {
+      let thresholdStr = '—';
+      if(ev.required_value !== null && ev.required_value !== undefined){
+        thresholdStr = `${ev.operator||'>='} ${ev.required_value} ${ev.required_unit||''}`;
+      }
+      return `
+        <tr>
+          <td>
+            <strong>${ev.requirement_id}</strong><br>
+            <span style="font-size:11px;color:var(--text-muted);">${ev.category}</span>
+          </td>
+          <td style="font-size:12px;">${ev.requirement_text}</td>
+          <td>
+            <strong style="font-size:12px;">${ev.parameter}</strong><br>
+            <span style="font-size:11px;color:var(--primary);">${thresholdStr}</span>
+          </td>
+          <td>${labelBadge(ev.label)}</td>
+          <td style="font-size:12px;">
+            ${ev.top_evidence_sentence ? `"${ev.top_evidence_sentence}"` : '<em style="color:var(--text-muted);">No matching evidence</em>'}
+            <div class="ev-meta">
+              <span>Doc: <strong>${ev.top_evidence_source||'—'}</strong></span>
+              <span>Page: <strong>${ev.top_evidence_page||1}</strong></span>
+              <span>Sim: <strong>${(ev.top_similarity_score*100).toFixed(1)}%</strong></span>
+              ${ev.nli_relation ? `<span>NLI: <strong>${ev.nli_relation}</strong></span>` : ''}
+            </div>
+            <div class="reasoning-box">${ev.reasoning}</div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    content.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
+        <div class="stat-mini"><div class="s-val">${a.total_requirements||0}</div><div class="s-lbl">Requirements</div></div>
+        <div class="stat-mini s-comp"><div class="s-val">${a.compliant_count||0}</div><div class="s-lbl">Compliant</div></div>
+        <div class="stat-mini s-non"><div class="s-val">${a.non_compliant_count||0}</div><div class="s-lbl">Non-Compliant</div></div>
+        <div class="stat-mini s-unc"><div class="s-val">${a.uncertain_count||0}</div><div class="s-lbl">Uncertain</div></div>
+        <div class="stat-mini s-miss"><div class="s-val">${a.missing_evidence_count||0}</div><div class="s-lbl">Missing</div></div>
+      </div>
+      ${conflictHtml}
+      <div class="clause-table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:12%;">ID &amp; Category</th>
+              <th style="width:25%;">Requirement Text</th>
+              <th style="width:15%;">Parameter Threshold</th>
+              <th style="width:12%;">Compliance</th>
+              <th style="width:36%;">Retrieved Evidence &amp; Provenance</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+
+  }catch(err){
+    content.innerHTML = `<div class="empty-state" style="color:var(--non-compliant);">
+      <strong>Error loading details:</strong> ${err.message}
+    </div>`;
+  }
+}
+
+function closeModal(){
+  document.getElementById('report-detail-modal').style.display = 'none';
+}
+
+function printModal(){
+  window.print();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TENDERS VIEW
+═══════════════════════════════════════════════════════════════ */
+function renderTendersView(){
+  const grid = document.getElementById('tenders-grid');
+  if(!cachedTenders || cachedTenders.length === 0){
+    grid.innerHTML = '<div class="empty-state">No tender documents found in repository.</div>';
+    return;
+  }
+  const descriptions = {
+    'TENDER-2024-FIN-004.pdf': 'Financial & Accounting Enterprise Platform. Key clauses: Minimum Annual Turnover USD 10M, ISO 27001 Certification, 5 Years Financial Auditing History.',
+    'TENDER-2024-IT-001.pdf':  'IT Infrastructure & Cloud Network Modernization. Key clauses: Minimum 1 Gbps Bandwidth, 99.9% Uptime SLA, 24/7 Dedicated Support.',
+    'TENDER-2024-MED-002.pdf': 'Healthcare Medical Supplies & Bio-Diagnostic Systems. Key clauses: WHO-GMP Certified Production, Cold-Chain Transit &lt; 4°C, 36 Months Warranty.',
+    'TENDER-2024-SOLAR-003.pdf': 'Solar Power Plant & Distributed Photovoltaic Grid. Key clauses: 50 MW Generation Capacity, Tier-1 PV Module Certification, 25-Year Warranty.'
+  };
+
+  grid.innerHTML = cachedTenders.map(t => {
+    const desc = descriptions[t] || 'Authoritative procurement tender document with clause requirements extracted via NLP.';
+    return `
+      <div class="doc-card">
+        <div class="doc-card-header">
+          <div class="doc-card-icon">📄</div>
+          <div>
+            <div class="doc-card-title">${t}</div>
+            <div style="font-size:11px;color:var(--primary);font-weight:600;">Government e-Marketplace (GeM)</div>
+          </div>
+        </div>
+        <div class="doc-card-meta">
+          <p style="margin-bottom:8px;">${desc}</p>
+          <div><strong>Format:</strong> Structured PDF &bull; <strong>Status:</strong> Extracted &amp; Verified</div>
+        </div>
+        <div class="doc-card-footer">
+          <span class="badge compliant">Ready for Evaluation</span>
+          <button class="btn-primary btn-sm" onclick="selectTenderAndAnalyze('${t}')">▶ Analyze Bids →</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function selectTenderAndAnalyze(tenderFilename){
+  navigate('bid-analysis');
+  const sel = document.getElementById('select-tender');
+  if(sel){
+    sel.value = tenderFilename;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CROSS-DOC CONFLICTS VIEW
+═══════════════════════════════════════════════════════════════ */
+async function renderConflictsView(){
+  const container = document.getElementById('conflicts-container');
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div>Scanning database for Phase 7 cross-document discrepancies…</div>';
+
+  try{
+    const res = await fetch('/api/analyses');
+    const analyses = await res.json();
+    const conflictAnalyses = analyses.filter(a => a.non_compliant_count > 0 && a.annexure_documents?.length > 0);
+
+    if(conflictAnalyses.length === 0){
+      container.innerHTML = `
+        <div class="xdoc-card no-conflict">
+          <div class="xdoc-header">
+            <div class="xdoc-header-left">
+              <div class="xdoc-alert-icon">✅</div>
+              <div>
+                <div class="xdoc-title">No Unresolved Conflicts</div>
+                <div class="xdoc-sub">All historical analyses show consistency between proposals and annexures</div>
+              </div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <p style="color:var(--text-muted);font-size:13px;">To test and demonstrate Phase 7 Cross-Document Conflict detection, click the <strong>Test Discrepancy Pipeline</strong> button above to evaluate Alpha Tech's proposal alongside its audited financial statements annexure.</p>
+          </div>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = conflictAnalyses.map(a => `
+      <div class="xdoc-card" style="margin-bottom:20px;">
+        <div class="xdoc-header">
+          <div class="xdoc-header-left">
+            <div class="xdoc-alert-icon">⚠️</div>
+            <div>
+              <div class="xdoc-title">${a.tender_filename} &bull; ${a.bidder_filename}</div>
+              <div class="xdoc-sub">Evaluated on ${fmtDate(a.created_at)} &bull; ${a.annexure_documents?.join(', ')}</div>
+            </div>
+          </div>
+          <span class="phase7-ribbon">Phase 7 Discrepancy</span>
+        </div>
+        <div class="panel-body">
+          <div style="font-size:13px;color:var(--text);margin-bottom:12px;">
+            <strong>Discrepancy Summary:</strong> Self-declared narrative claims in the proposal differed from the audited metric verified in the legally binding annexure. Under Phase 7 precedence, the authoritative figure supersedes self-claims.
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);">
+            <div>
+              <span class="badge non_compliant">Non-Compliant</span>
+              <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${a.non_compliant_count} clause(s) failed</span>
+            </div>
+            <button class="btn-primary btn-sm" onclick="viewAnalysisDetails('${a.id}')">Inspect Full Audit Provenance →</button>
+          </div>
+        </div>
+      </div>`).join('');
+
+  }catch(err){
+    container.innerHTML = `<div class="empty-state" style="color:var(--non-compliant);">Error loading conflicts: ${err.message}</div>`;
+  }
+}
+
+function launchConflictDemo(){
+  navigate('bid-analysis');
+  const selTender = document.getElementById('select-tender');
+  const selBidder = document.getElementById('select-bidder');
+  if(selTender) selTender.value = 'TENDER-2024-FIN-004.pdf';
+  if(selBidder){
+    selBidder.value = 'BIDDER-ALPHA-TECH-PROPOSAL.pdf';
+    onBidderSelectionChanged();
+  }
+  document.getElementById('btn-run')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EVIDENCE LIBRARY VIEW
+═══════════════════════════════════════════════════════════════ */
+function renderEvidenceView(){
+  const tendersEl = document.getElementById('evidence-tenders');
+  const propsEl   = document.getElementById('evidence-proposals');
+
+  if(tendersEl && cachedTenders){
+    tendersEl.innerHTML = cachedTenders.map(t => `
+      <div class="doc-card">
+        <div class="doc-card-header">
+          <div class="doc-card-icon">📄</div>
+          <div>
+            <div class="doc-card-title">${t}</div>
+            <div style="font-size:10px;color:var(--text-muted);">Authoritative Specification</div>
+          </div>
+        </div>
+        <div class="doc-card-meta">
+          <strong>Type:</strong> Tender RFP (PDF)<br>
+          <strong>Extraction:</strong> Dual PDFPlumber + PyMuPDF fallback
+        </div>
+        <div class="doc-card-footer">
+          <span class="badge compliant">Available</span>
+          <button class="act-btn" onclick="selectTenderAndAnalyze('${t}')">Evaluate →</button>
+        </div>
+      </div>`).join('');
+  }
+
+  if(propsEl && cachedPackages){
+    const proposals = cachedPackages.proposals || [];
+    propsEl.innerHTML = proposals.map(p => {
+      const linked = packageMapping[p] || [];
+      const hasAnnexure = linked.length > 0;
+      return `
+        <div class="doc-card">
+          <div class="doc-card-header">
+            <div class="doc-card-icon" style="background:#F0FDF4;">📦</div>
+            <div>
+              <div class="doc-card-title">${p}</div>
+              <div style="font-size:10px;color:var(--text-muted);">${hasAnnexure ? 'Multi-Document Package' : 'Single Proposal PDF'}</div>
+            </div>
+          </div>
+          <div class="doc-card-meta">
+            <strong>Linked Annexures:</strong> ${hasAnnexure ? linked.map(a=>`<code>${a}</code>`).join(', ') : 'None'}<br>
+            <strong>Security:</strong> ${hasAnnexure ? 'Isolated to this Bidder' : 'Self-Contained'}
+          </div>
+          <div class="doc-card-footer">
+            <span class="badge ${hasAnnexure ? 'phase7' : 'compliant'}">${hasAnnexure ? 'Multi-Doc Package' : 'Single PDF'}</span>
+            <button class="btn-primary btn-sm" onclick="selectBidderAndAnalyze('${p}')">Analyze →</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+}
+
+function selectBidderAndAnalyze(bidderFilename){
+  navigate('bid-analysis');
+  const sel = document.getElementById('select-bidder');
+  if(sel){
+    sel.value = bidderFilename;
+    onBidderSelectionChanged();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUDIT TRAIL VIEW
+═══════════════════════════════════════════════════════════════ */
+async function renderAuditView(){
+  const container = document.getElementById('audit-table-container');
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div>Loading SQLite audit logs…</div>';
+
+  try{
+    const res = await fetch('/api/analyses');
+    const analyses = await res.json();
+
+    if(analyses.length === 0){
+      container.innerHTML = '<div class="empty-state">No audit logs recorded yet. Run a compliance analysis to generate audit events.</div>';
+      return;
+    }
+
+    const rows = analyses.map(a => `
+      <tr>
+        <td class="td-date">${fmtDate(a.created_at)}</td>
+        <td><code>${a.id}</code></td>
+        <td class="td-tender">${a.tender_filename}</td>
+        <td class="td-bidder">${a.bidder_filename}</td>
+        <td style="font-size:11px;">
+          <strong>${a.retrieval_method||'Sentence-BERT'}</strong> &bull; NLI: ${a.nli_enabled ? 'ON' : 'OFF'}
+        </td>
+        <td>${overallBadge(a.overall_status)}</td>
+        <td class="td-actions">
+          <button class="act-btn" onclick="viewAnalysisDetails('${a.id}')">Trace Provenance →</button>
+        </td>
+      </tr>`).join('');
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Execution ID</th>
+            <th>Tender RFP</th>
+            <th>Bidder Proposal</th>
+            <th>Engine Architecture</th>
+            <th>Outcome</th>
+            <th style="text-align:right;">Audit Trace</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+  }catch(err){
+    container.innerHTML = `<div class="empty-state" style="color:var(--non-compliant);">Error loading audit records: ${err.message}</div>`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOT INITIALIZATION
+═══════════════════════════════════════════════════════════════ */
+window.onload = function(){
+  loadHealth();
+  loadDashboardStats();
+  loadDocuments();
+
+  // Initial route
+  const initialHash = window.location.hash.replace('#', '') || 'overview';
+  navigate(initialHash);
+};
+</script>
+</body>
+</html>

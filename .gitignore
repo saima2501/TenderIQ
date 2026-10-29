@@ -1,0 +1,38 @@
+﻿# Python environments and caches
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local databases and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Model caches
+.cache/
+hf_cache/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.backup
+*.bak
+*.step1_backup
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
