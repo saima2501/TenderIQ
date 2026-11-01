@@ -1,4 +1,4 @@
-﻿# Python environments and caches
+# Python environments and caches
 venv/
 .venv/
 env/
@@ -20,12 +20,18 @@ __pycache__/
 # Model caches
 .cache/
 hf_cache/
+.hf_home/
+models/
+checkpoints/
 
-# Editor and OS files
+# Editor, OS and temporary files
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+*.tmp
+*.temp
+*~
 
 # Backup files
 *.backup

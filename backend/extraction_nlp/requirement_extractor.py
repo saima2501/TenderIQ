@@ -26,6 +26,8 @@ import re
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional, Union, Tuple
 
+from backend.extraction_nlp.number_normalizer import NumberWordNormalizer
+
 # Optional spaCy integration with graceful fallback
 try:
     import spacy
@@ -151,6 +153,22 @@ class RequirementExtractor:
         r"<=",
     ]
 
+    OPERATOR_LT_PATTERNS = [
+        r"\bstrictly\s+less\s+than\b",
+        r"\bless\s+than\b",
+        r"\bunder\b",
+        r"\bbelow\b",
+        r"(?<![=<])<(?![=>])",
+    ]
+
+    OPERATOR_GT_PATTERNS = [
+        r"\bstrictly\s+greater\s+than\b",
+        r"\bgreater\s+than\b",
+        r"\bmore\s+than\b",
+        r"\babove\b",
+        r"(?<![=>])>(?![=<])",
+    ]
+
     OPERATOR_EQ_PATTERNS = [
         r"\bexactly\b",
         r"\bequal\s+to\b",
@@ -182,6 +200,7 @@ class RequirementExtractor:
     def __init__(self, use_spacy: bool = True):
         self.use_spacy = use_spacy and SPACY_AVAILABLE
         self.engine_name = "spacy_with_rules" if self.use_spacy else "regex_rules"
+        self.number_normalizer = NumberWordNormalizer()
 
     def clean_text_for_nlp(self, text: str) -> str:
         """Removes PDF watermark line artifacts and normalizes whitespace."""
@@ -252,8 +271,8 @@ class RequirementExtractor:
             doc = _nlp(text)
             return [s.text for s in doc.sents if s.text.strip()]
 
-        # Pure-Python sentence boundary regex protecting abbreviations like "USD", "e.g.", "Dr.", "No.", "Ref."
-        splits = re.split(r"(?<!\bUSD)(?<!\be\.g)(?<!\bi\.e)(?<!\bDr)(?<!\bNo)(?<!\bRef)(?<!\bFY\d{4})[\.\?!]\s+(?=[A-Z0-9])", text)
+        # Pure-Python sentence boundary regex protecting abbreviations like "USD", "INR", "Rs", "Pvt", "Ltd", "e.g.", "Dr.", "No.", "Ref."
+        splits = re.split(r"(?<!\bUSD)(?<!\bINR)(?<!\bRs)(?<!\bPvt)(?<!\bLtd)(?<!\bInc)(?<!\bCorp)(?<!\bCo)(?<!\be\.g)(?<!\bi\.e)(?<!\bDr)(?<!\bNo)(?<!\bRef)(?<!\bFY\d{4})[\.\?!]\s+(?=[A-Z0-9])", text)
         sentences = []
         for s in splits:
             s_clean = s.strip()
@@ -444,6 +463,13 @@ class RequirementExtractor:
             exp_match = re.search(r"(\d+)\s+years?\s+of\s+(?:relevant|direct|related)", text, re.IGNORECASE)
         if exp_match:
             exp_years = float(exp_match.group(1))
+        elif hasattr(self, "number_normalizer") and self.number_normalizer:
+            if not self.number_normalizer.is_ambiguous_phrase(text):
+                norm_nums = self.number_normalizer.extract_normalized_numbers(text)
+                for n in norm_nums:
+                    if n.unit in ("years", "year"):
+                        exp_years = n.value
+                        break
 
         is_mandatory, _, _ = self._determine_modality(text, section)
         has_value_uncertainty = exp_years is None
@@ -591,7 +617,7 @@ class RequirementExtractor:
         def _local_operator(ctx: str) -> str:
             """Returns the dominant operator found in a short context string.
 
-            Evaluation order: EQ > GTE > LTE > NONE.
+            Evaluation order: EQ > GTE > LTE > GT > LT > NONE.
             GTE is evaluated before LTE so 'at least' beats 'inside'/'within'
             when both appear in the same multi-metric sentence.
             """
@@ -601,6 +627,10 @@ class RequirementExtractor:
                 return ">="
             if any(re.search(pat, ctx, re.IGNORECASE) for pat in self.OPERATOR_LTE_PATTERNS):
                 return "<="
+            if any(re.search(pat, ctx, re.IGNORECASE) for pat in self.OPERATOR_GT_PATTERNS):
+                return ">"
+            if any(re.search(pat, ctx, re.IGNORECASE) for pat in self.OPERATOR_LT_PATTERNS):
+                return "<"
             return "NONE"
 
         # Context window size (characters before the matched value)
@@ -628,8 +658,50 @@ class RequirementExtractor:
             return operator, val, unit, param, "Numeric percentage extracted.", False
 
         # -----------------------------------------------------------------------
-        # 2. Financial amounts (e.g. USD 10.0 Million, USD 2.0 Million)
+        # 2. Financial amounts (e.g. USD 10.0 Million, ₹10 crore, INR 15 Cr, Rs. 50 Lakh)
         # -----------------------------------------------------------------------
+        # 2a. Indian Financial amounts
+        inr_match = re.search(
+            r"(?:(?:INR|Rs\.?|₹|Rupees?)\s*(\d+(?:\.\d+)?)\s*(Crores?|Cr\.?|Lakhs?|Lacs?|Thousand|K)?\b|"
+            r"(\d+(?:\.\d+)?)\s*(Crores?|Cr\.?|Lakhs?|Lacs?)\b(?:\s*(?:INR|Rs\.?|₹|Rupees?))?|"
+            r"(\d+(?:\.\d+)?)\s*(?:INR|Rs\.?|₹|Rupees?)\b)",
+            text,
+            re.IGNORECASE
+        )
+        if inr_match:
+            g = inr_match.groups()
+            if g[0] is not None:
+                val = float(g[0])
+                scale = g[1]
+            elif g[2] is not None:
+                val = float(g[2])
+                scale = g[3]
+            else:
+                val = float(g[4])
+                scale = None
+
+            if scale:
+                scale_lower = scale.lower()
+                if scale_lower.startswith("cr"):
+                    unit = "INR Crore"
+                elif scale_lower.startswith("l"):
+                    unit = "INR Lakh"
+                elif scale_lower.startswith("t") or scale_lower == "k":
+                    unit = "INR Thousand"
+                else:
+                    unit = f"INR {scale}"
+            else:
+                unit = "INR"
+
+            param = "audited financial turnover" if ("turnover" in text.lower() or "revenue" in text.lower()) else "net worth / solvency"
+            ctx_start = max(0, inr_match.start() - CTX_WINDOW)
+            local_ctx = text[ctx_start: inr_match.end()]
+            operator = _local_operator(local_ctx)
+            if operator == "NONE":
+                operator = ">="
+            return operator, val, unit, param, "Indian financial threshold extracted.", False
+
+        # 2b. USD / Foreign Financial amounts
         fin_match = re.search(r"(?:USD|\$)\s*(\d+(?:\.\d+)?)\s*(Million|M|Billion|B|K)?", text, re.IGNORECASE)
         if fin_match:
             val = float(fin_match.group(1))
@@ -689,6 +761,10 @@ class RequirementExtractor:
                 param = "incident on-site resolution time"
                 if operator == "NONE":
                     operator = "<="
+            elif "mttr" in text.lower() or "recovery" in text.lower() or "restoration" in text.lower():
+                param = "Mean Time to Recover (MTTR)"
+                if operator == "NONE":
+                    operator = "<="
             elif "experience" in text.lower() or "operating" in text.lower():
                 param = "continuous commercial operating experience"
                 if operator == "NONE":
@@ -726,6 +802,71 @@ class RequirementExtractor:
         for std_key, std_name in self.STANDARDS_MAP.items():
             if re.search(r"\b" + re.escape(std_key) + r"\b", text, re.IGNORECASE):
                 return "CONTAINS", std_name, None, f"{std_name} compliance", "Specific technical standard extracted.", False
+
+        # -----------------------------------------------------------------------
+        # 6b. Spelled-out English Numbers & Duration Expressions (Phase 8 Step 2A.1)
+        # Reuses NumberWordNormalizer to support written numbers on requirement side.
+        # -----------------------------------------------------------------------
+        if hasattr(self, "number_normalizer") and self.number_normalizer:
+            if not self.number_normalizer.is_ambiguous_phrase(text):
+                norm_results = self.number_normalizer.extract_normalized_numbers(text)
+                if norm_results:
+                    norm = norm_results[0]
+                    val = norm.value
+                    unit = norm.unit
+
+                    # Check local context window around matched span
+                    ctx_start = max(0, norm.start_char - CTX_WINDOW)
+                    local_ctx = text[ctx_start: norm.end_char]
+                    ctx_op = _local_operator(local_ctx)
+
+                    # Determine operator precedence
+                    if norm.operator in (">", "<"):
+                        operator = norm.operator
+                    elif ctx_op != "NONE":
+                        operator = ctx_op
+                    elif norm.operator != "==":
+                        operator = norm.operator
+                    else:
+                        operator = ">="
+                        if any(w in text.lower() for w in ["incident response", "response inside", "fix", "resolution", "downtime"]):
+                            operator = "<="
+
+                    # Determine parameter description
+                    param = norm.parameter_hint
+                    lower_text = text.lower()
+                    if norm.unit in {"years", "months", "days", "hours"}:
+                        if "warranty" in lower_text:
+                            param = "comprehensive warranty duration"
+                        elif "incident response" in lower_text or "response" in lower_text:
+                            param = "critical incident response time"
+                        elif "experience" in lower_text or "operating" in lower_text:
+                            param = "continuous commercial operating experience"
+                        else:
+                            param = f"duration in {norm.unit}"
+                    elif norm.unit in {"INR Crore", "INR Lakh", "INR Thousand", "INR", "USD Million", "USD Billion", "USD"}:
+                        param = "audited financial turnover" if ("turnover" in lower_text or "revenue" in lower_text) else "net worth / solvency"
+                    elif norm.unit in {"Gbps", "Mbps", "kbps"}:
+                        param = "network data throughput capacity"
+                    elif norm.unit == "%":
+                        if "uptime" in lower_text or "availability" in lower_text:
+                            param = "monthly uptime SLA"
+                        elif "local" in lower_text or "domestic" in lower_text:
+                            param = "local domestic content"
+                        else:
+                            param = "parameter_percentage"
+                    elif norm.unit == "count":
+                        if any(w in lower_text for w in ["employee", "people", "staff", "personnel", "headcount"]):
+                            param = "organizational headcount"
+                        elif "engineer" in lower_text:
+                            param = "dedicated certified engineers"
+                        elif "project" in lower_text or re.search(r"\bcontracts?\b", lower_text):
+                            param = "reference project scale"
+                        else:
+                            param = "quantity threshold"
+
+                    notes = f"Normalized word-number threshold extracted: {norm.raw_text} -> {val} {unit} ({operator})."
+                    return operator, val, unit, param, notes, False
 
         # -----------------------------------------------------------------------
         # 7. Generic or Ambiguous clause without explicit metric

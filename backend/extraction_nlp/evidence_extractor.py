@@ -24,6 +24,8 @@ import re
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional, Tuple
 
+from backend.extraction_nlp.number_normalizer import NumberWordNormalizer
+
 # Optional spaCy integration with graceful fallback
 try:
     import spacy
@@ -136,6 +138,7 @@ class EvidenceExtractor:
     def __init__(self, use_spacy: bool = True):
         self.use_spacy = use_spacy and SPACY_AVAILABLE
         self.engine_name = "spacy_with_rules" if self.use_spacy else "regex_rules"
+        self.number_normalizer = NumberWordNormalizer()
 
     def clean_text_for_nlp(self, text: str) -> str:
         """Removes PDF watermark line artifacts and normalizes sentence continuity."""
@@ -203,7 +206,7 @@ class EvidenceExtractor:
             return [s.text for s in doc.sents if s.text.strip()]
 
         # Pure-Python protected sentence splitter
-        splits = re.split(r"(?<!\bUSD)(?<!\be\.g)(?<!\bi\.e)(?<!\bDr)(?<!\bNo)(?<!\bRef)(?<!\bAY)(?<!\bFY\d{4})[\.\?!]\s+(?=[A-Z0-9])", text)
+        splits = re.split(r"(?<!\bUSD)(?<!\bINR)(?<!\bRs)(?<!\bPvt)(?<!\bLtd)(?<!\bInc)(?<!\bCorp)(?<!\bCo)(?<!\be\.g)(?<!\bi\.e)(?<!\bDr)(?<!\bNo)(?<!\bRef)(?<!\bAY)(?<!\bFY\d{4})[\.\?!]\s+(?=[A-Z0-9])", text)
         sentences = []
         for s in splits:
             s_clean = s.strip()
@@ -415,7 +418,51 @@ class EvidenceExtractor:
                 "parameter_hint": hint
             })
 
-        # 2. Financial Amounts (e.g. USD 14.5 Million, USD 4.5 Million, USD 6.2 Million)
+        # 2. Financial Amounts
+        # 2a. Indian Financial Amounts (e.g. ₹10 crore, INR 15 Cr, Rs. 50 Lakh, 150 lakh rupees)
+        inr_pat = re.compile(
+            r"(?:(?:INR|Rs\.?|₹|Rupees?)\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(Crores?|Cr\.?|Lakhs?|Lacs?|Thousand|K)?\b|"
+            r"(\d+(?:,\d+)*(?:\.\d+)?)\s*(Crores?|Cr\.?|Lakhs?|Lacs?)\b(?:\s*(?:INR|Rs\.?|₹|Rupees?))?|"
+            r"(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:INR|Rs\.?|₹|Rupees?)\b)",
+            re.IGNORECASE
+        )
+        for m in inr_pat.finditer(text):
+            g = m.groups()
+            if g[0] is not None:
+                val = float(g[0].replace(",", ""))
+                scale = g[1]
+            elif g[2] is not None:
+                val = float(g[2].replace(",", ""))
+                scale = g[3]
+            else:
+                val = float(g[4].replace(",", ""))
+                scale = None
+
+            if scale:
+                scale_lower = scale.lower()
+                if scale_lower.startswith("cr"):
+                    unit = "INR Crore"
+                elif scale_lower.startswith("l"):
+                    unit = "INR Lakh"
+                elif scale_lower.startswith("t") or scale_lower == "k":
+                    unit = "INR Thousand"
+                else:
+                    unit = f"INR {scale}"
+            else:
+                unit = "INR"
+
+            raw = m.group(0).strip()
+            hint = "annual_turnover" if ("turnover" in text.lower() or "revenue" in text.lower()) else "net_worth_solvency"
+            if "project" in text.lower() or "commissioned" in text.lower():
+                hint = "project_valuation"
+            metrics.append({
+                "raw": raw,
+                "value": val,
+                "unit": unit,
+                "parameter_hint": hint
+            })
+
+        # 2b. USD / Foreign Financial Amounts (e.g. USD 14.5 Million, USD 4.5 Million, USD 6.2 Million)
         for m in re.finditer(r"(?:USD|\$)\s*(\d+(?:\.\d+)?)\s*(Million|M|Billion|B|K)?", text, re.IGNORECASE):
             val = float(m.group(1))
             mult = m.group(2) or "Million"
@@ -465,18 +512,46 @@ class EvidenceExtractor:
                 "parameter_hint": hint
             })
 
-        # 5. Counts (e.g. 4 certified client project completions, 5 full-time certified engineers)
-        for m in re.finditer(r"(\d+)\s*(certified\s+client\s+project\s+completions?|full-time\s+certified\s+engineers?|dedicated\s+certified\s+engineers?|on-site\s+engineers?|hospital\s+deployments?|medical\s+centers?)", text, re.IGNORECASE):
+        # 5. Counts (e.g. 4 certified client project completions, 5 full-time certified engineers, 6 full-time senior certified DBAs, 175 people)
+        for m in re.finditer(r"(\d+)\s*(certified\s+client\s+project\s+completions?|(?:(?:full-time|dedicated|senior|certified)\s+)*(?:engineers?|dbas?|database\s+administrators?|architects?|specialists?|analysts?|consultants?|developers?)|on-site\s+engineers?|hospital\s+deployments?|medical\s+centers?|employees?|personnel|staff|people)", text, re.IGNORECASE):
             val = float(m.group(1))
             unit = m.group(2).lower()
             raw = m.group(0).strip()
-            hint = "project_count" if "project" in unit or "deployment" in unit else "engineer_count"
+            if any(k in unit for k in ["employee", "people", "staff", "personnel", "engineer", "dba", "administrator", "architect", "specialist"]):
+                hint = "headcount"
+            elif any(k in unit for k in ["project", "deployment", "center"]):
+                hint = "project_count"
+            else:
+                hint = "count"
             metrics.append({
                 "raw": raw,
                 "value": val,
                 "unit": unit,
                 "parameter_hint": hint
             })
+
+        # 6. Normalized Word-Numbers and Duration Idioms (Phase 8 Step 2A)
+        # Recognizes spelled-out English numbers, duration idioms, and bounded expressions
+        if hasattr(self, "number_normalizer") and self.number_normalizer:
+            normalized_list = self.number_normalizer.extract_normalized_numbers(text)
+            for norm in normalized_list:
+                # Avoid duplicate metrics if already extracted by regex digit extractors
+                is_duplicate = False
+                for existing in metrics:
+                    if existing.get("parameter_hint") == norm.parameter_hint and abs(existing.get("value", 0.0) - norm.value) < 1e-4:
+                        is_duplicate = True
+                        break
+                if not is_duplicate:
+                    metrics.append({
+                        "raw": norm.raw_text,
+                        "value": norm.value,
+                        "unit": norm.unit,
+                        "parameter_hint": norm.parameter_hint,
+                        "operator": norm.operator,
+                        "is_normalized_word": True,
+                        "start_char": norm.start_char,
+                        "end_char": norm.end_char
+                    })
 
         return metrics
 

@@ -371,11 +371,17 @@ class CrossDocumentReconciler:
         )
         is_debarment = "debarred" in req_text_lower or "blacklisted" in req_text_lower or "suspended" in req_text_lower
         is_certificate_expiry = "valid" in req_text_lower or "authorization" in req_text_lower or "accredited" in req_text_lower
+        is_sla_uptime = ("uptime" in req_text_lower or "sla" in req_text_lower or "availability" in req_text_lower) and requirement_value is not None
 
         for annexure_grp in annexure_groups:
             for proposal_grp in proposal_groups:
                 if is_financial:
                     c = self._check_financial_conflict(proposal_grp, annexure_grp, requirement_value, requirement_unit)
+                    if c:
+                        conflicts.append(c)
+
+                if is_sla_uptime:
+                    c = self._check_sla_uptime_conflict(proposal_grp, annexure_grp, requirement_value)
                     if c:
                         conflicts.append(c)
 
@@ -553,6 +559,68 @@ class CrossDocumentReconciler:
             secondary_source=annexure_grp.source_document,
             secondary_value=annexure_val,
             secondary_unit="USD Million",
+            secondary_text=annexure_text[:300],
+            secondary_page=annexure_page,
+            resolution_policy="annexure_supersedes_proposal",
+            recommended_label=rec_label,
+            confidence=conf,
+            reasoning=rsn,
+        )
+
+
+    def _check_sla_uptime_conflict(
+        self,
+        proposal_grp: DocumentEvidenceGroup,
+        annexure_grp: DocumentEvidenceGroup,
+        requirement_value: Optional[float],
+    ) -> Optional[ConflictingClaimPair]:
+        """Detects conflict between proposal SLA claims and binding annexure SLA terms."""
+        proposal_text = " ".join(proposal_grp.sentences)
+        annexure_text = " ".join(annexure_grp.sentences)
+
+        p_match = re.search(r"(\d+(?:\.\d+)?)\s*%", proposal_text)
+        a_match = re.search(r"(\d+(?:\.\d+)?)\s*%", annexure_text)
+
+        if not p_match or not a_match:
+            return None
+
+        p_val = float(p_match.group(1))
+        a_val = float(a_match.group(1))
+
+        if abs(p_val - a_val) < 0.05:
+            return None
+
+        req_val = float(requirement_value) if requirement_value is not None else 99.0
+        if a_val < req_val:
+            rec_label = "NON_COMPLIANT"
+            conf = 0.89
+            rsn = (
+                f"SLA availability conflict: Executive proposal commits to {p_val:.2f}% uptime; "
+                f"however, binding SLA terms in annexure '{annexure_grp.source_document}' restrict "
+                f"guaranteed availability to {a_val:.2f}%, failing the mandatory requirement of {req_val:.2f}%."
+            )
+        else:
+            rec_label = "UNCERTAIN"
+            conf = 0.75
+            rsn = (
+                f"SLA availability discrepancy: Proposal claims {p_val:.2f}% uptime, while annexure "
+                f"'{annexure_grp.source_document}' specifies {a_val:.2f}% uptime."
+            )
+
+        proposal_page = proposal_grp.page_numbers[0] if proposal_grp.page_numbers else None
+        annexure_page = annexure_grp.page_numbers[0] if annexure_grp.page_numbers else None
+
+        return ConflictingClaimPair(
+            conflict_type="sla_uptime_discrepancy",
+            criterion="monthly_uptime_sla",
+            primary_source=proposal_grp.source_document,
+            primary_value=p_val,
+            primary_unit="%",
+            primary_text=proposal_text[:300],
+            primary_page=proposal_page,
+            secondary_source=annexure_grp.source_document,
+            secondary_value=a_val,
+            secondary_unit="%",
             secondary_text=annexure_text[:300],
             secondary_page=annexure_page,
             resolution_policy="annexure_supersedes_proposal",

@@ -88,6 +88,7 @@ class CompliancePipeline:
         retrieval_method: Optional[str] = None,
         enable_nli: Optional[bool] = None,
         enable_reconciliation: Optional[bool] = None,
+        tender_submission_date: Optional[Any] = None,
         save_to_db: bool = True
     ) -> DocumentComplianceReport:
         """Executes full end-to-end extraction, matching, and multi-document classification.
@@ -181,7 +182,8 @@ class CompliancePipeline:
                 tender_filename=tender_filename,
                 bidder_filename=bidder_filename,
                 bidder_name=bidder_name,
-                annexure_documents=annexure_filenames
+                annexure_documents=annexure_filenames,
+                tender_submission_date=tender_submission_date
             )
 
             # 7. Save Analysis & Results to SQLite Database

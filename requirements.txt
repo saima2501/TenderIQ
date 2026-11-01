@@ -1,0 +1,34 @@
+# TenderIQ - Production & Development Dependencies
+# Python Version: 3.12 (Verified on Windows 64-bit)
+# All versions pinned to match the verified working environment.
+
+# Web Framework & API Server
+fastapi==0.157.0
+uvicorn==0.54.0
+pydantic==2.14.1
+
+# PDF Document Extraction (Phase 2)
+pdfplumber==0.11.10
+pymupdf==2.0
+
+# Mathematical & Array Operations
+numpy==2.5.4
+
+# Document Generation & Image Utilities (Phase 1 & Tests)
+reportlab==5.0.1
+pillow==13.0.0
+
+# Deep Learning & NLP Transformers (Phases 5 & 6)
+# Used for:
+# - Sentence-BERT dense retrieval (all-MiniLM-L6-v2)
+# - Cross-Encoder Natural Language Inference (nli-distilroberta-base)
+sentence-transformers==6.2.0
+torch==2.14.1
+transformers==5.20.2
+
+# Testing & Verification Framework
+pytest==9.1.1
+
+# Note on Optional Dependencies:
+# - spaCy (spacy): Optional sentencizer dependency in extraction_nlp.
+#   Not installed in current environment; the pipeline uses built-in pure-Python regex sentencizers.

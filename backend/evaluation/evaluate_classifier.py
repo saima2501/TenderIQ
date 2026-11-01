@@ -73,7 +73,11 @@ def evaluate_pipeline_on_split(
         # 1. Extract requirement structure
         req_list = req_ext.extract_from_text(req_text, source_document="TENDER.pdf")
         if req_list:
-            req_obj = req_list[0]
+            if (r.get("numerical_metadata") or {}).get("is_numerical"):
+                num_reqs = [x for x in req_list if isinstance(x.value, (int, float))]
+                req_obj = num_reqs[0] if num_reqs else req_list[0]
+            else:
+                req_obj = req_list[0]
             req_obj.requirement_id = r.get("requirement_id", "REQ-TEST")
         else:
             req_obj = ExtractedRequirement(
@@ -154,7 +158,14 @@ def evaluate_pipeline_on_split(
             nli_pred = classifier.nli_classifier.predict_pair(req_text, evd_text)
 
         # 4. Evaluate clause compliance
-        eval_res = classifier.evaluate_clause(req_obj, ret_result, nli_pred=nli_pred)
+        rec_submission_date = r.get("submission_deadline") or r.get("tender_submission_date") or "2024-10-15"
+        eval_res = classifier.evaluate_clause(
+            req_obj,
+            ret_result,
+            nli_pred=nli_pred,
+            tender_submission_date=rec_submission_date,
+            bidder_name=r.get("bidder_name")
+        )
         pred_label = eval_res.label
 
         y_true.append(gt_label)
