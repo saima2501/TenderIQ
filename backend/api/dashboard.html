@@ -632,6 +632,90 @@
     .section-divider hr { flex: 1; border: none; border-top: 1px solid var(--border); }
     .section-divider span { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
 
+
+    /* ── AI Assistant & Explanation Panel (Step 2G.5) ── */
+    .ai-badge-pill {
+      font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .ai-badge-pill.online { background: #EFF6FF; color: var(--primary); border: 1px solid #BFDBFE; }
+    .ai-badge-pill.offline { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
+    .ai-selector-box {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px; margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .ai-meta-banner {
+      background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 8px;
+      padding: 12px 16px; margin-top: 14px; display: flex; flex-wrap: wrap;
+      gap: 16px; align-items: center; justify-content: space-between;
+    }
+    .chat-container {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      display: flex; flex-direction: column; min-height: 520px;
+      overflow: hidden;
+    }
+    .quick-prompts-bar {
+      padding: 14px 18px 8px; display: flex; gap: 8px; flex-wrap: wrap;
+      border-bottom: 1px solid #F1F5F9; background: #FAFBFD;
+    }
+    .quick-prompt-btn {
+      background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF;
+      border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: all .15s; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .quick-prompt-btn:hover { background: #DBEAFE; border-color: #93C5FD; }
+    .chat-messages {
+      flex: 1; padding: 20px; overflow-y: auto; max-height: 480px;
+      display: flex; flex-direction: column; gap: 14px; background: #FAFBFD;
+    }
+    .chat-msg {
+      max-width: 82%; padding: 12px 16px; border-radius: 12px;
+      font-size: 13px; line-height: 1.5; word-wrap: break-word;
+    }
+    .chat-msg.user {
+      align-self: flex-end; background: var(--primary); color: #fff;
+      border-bottom-right-radius: 2px; box-shadow: 0 1px 3px rgba(37,99,235,.2);
+    }
+    .chat-msg.assistant {
+      align-self: flex-start; background: #fff; color: var(--text);
+      border: 1px solid var(--border); border-bottom-left-radius: 2px;
+      box-shadow: 0 1px 3px rgba(16,36,58,.04);
+    }
+    .chat-msg-header {
+      display: flex; align-items: center; gap: 6px; font-size: 10px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+      margin-bottom: 5px;
+    }
+    .chat-msg.user .chat-msg-header { color: #BFDBFE; }
+    .chat-msg.assistant .chat-msg-header { color: var(--primary); }
+    .chat-msg-citations {
+      margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px;
+    }
+    .chat-fallback-badge {
+      font-size: 10px; font-weight: 700; background: #FFFBEB; color: #92400E;
+      border: 1px solid #FDE68A; padding: 2px 6px; border-radius: 4px;
+      margin-left: auto; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .chat-input-bar {
+      padding: 14px 18px; border-top: 1px solid var(--border);
+      background: #fff; display: flex; gap: 10px; align-items: flex-end;
+    }
+    .chat-input {
+      flex: 1; resize: none; min-height: 42px; max-height: 120px;
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+      font-family: inherit; font-size: 13px; color: var(--text);
+      outline: none; transition: border-color .15s; line-height: 1.4;
+    }
+    .chat-input:focus { border-color: var(--primary); }
+    .ai-explanation-box {
+      background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 8px;
+      padding: 12px 14px; margin-top: 8px; font-size: 12px; color: var(--text);
+    }
+
     /* Print styles */
     @media print {
       #sidebar, #topbar, .heading-actions, .filter-toolbar, .act-btn, .modal-close { display: none !important; }
@@ -668,6 +752,9 @@
     <a class="sb-item" href="#conflicts" id="nav-conflicts" onclick="navigate('conflicts'); return false;">
       <span class="sb-icon">⚠️</span> Cross-Doc Conflicts
       <span class="sb-badge" id="conflict-nav-badge" style="display:none;">0</span>
+    </a>
+    <a class="sb-item" href="#ai-assistant" id="nav-ai-assistant" onclick="navigate('ai-assistant'); return false;">
+      <span class="sb-icon">🤖</span> AI Assistant
     </a>
 
     <div class="sb-divider"></div>
@@ -1198,6 +1285,131 @@
     <!-- ══════════════════════════════════════════════════════ -->
     <!--  VIEW 8: SETTINGS                                      -->
     <!-- ══════════════════════════════════════════════════════ -->
+    <!--  VIEW: AI ASSISTANT (Step 2G.5)                       -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section id="view-ai-assistant" class="spa-view" style="display:none;">
+      <div class="page-heading">
+        <div>
+          <h1>AI Procurement Assistant</h1>
+          <p>Ask conversational questions about TenderIQ bid compliance verification results</p>
+        </div>
+        <div class="heading-actions">
+          <span id="assistant-status-pill" class="ai-badge-pill online">
+            <span class="dot" id="assistant-status-dot" style="background:#16A34A;width:7px;height:7px;"></span>
+            <span id="assistant-status-text">Checking Local AI...</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Analysis Context Selector (Option 3: Current Analysis + Dropdown) -->
+      <div class="ai-selector-box">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <h3 style="font-size:14px;font-weight:700;color:var(--text);">Selected Bid Analysis Context</h3>
+            <p style="font-size:12px;color:var(--text-muted);">The assistant grounds all answers in the stored records of the selected analysis</p>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);">
+            Source: <strong>compliance_demo.db</strong>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;letter-spacing:.05em;">
+              Switch Analysis Record
+            </label>
+            <select id="assistant-analysis-select" onchange="onAssistantAnalysisChanged(true)">
+              <option value="">-- Loading Analyses... --</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Selected Analysis Metadata Banner -->
+        <div id="assistant-meta-banner" class="ai-meta-banner" style="display:none;">
+          <div>
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Tender:</span>
+            <strong id="assistant-meta-tender" style="margin-left:4px;font-size:12px;color:var(--text);">—</strong>
+          </div>
+          <div>
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Bidder:</span>
+            <strong id="assistant-meta-bidder" style="margin-left:4px;font-size:12px;color:var(--primary);">—</strong>
+          </div>
+          <div>
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Overall Status:</span>
+            <span id="assistant-meta-verdict" style="margin-left:4px;">—</span>
+          </div>
+          <div>
+            <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Analysis ID:</span>
+            <code id="assistant-meta-id" style="margin-left:4px;font-size:11px;color:var(--text-muted);">—</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Analysis Selected Prompt -->
+      <div id="assistant-no-analysis-prompt" class="panel-card" style="padding:48px 24px;text-align:center;display:none;">
+        <div style="font-size:40px;margin-bottom:14px;">📋</div>
+        <h3 style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">No Bid Analysis Selected</h3>
+        <p style="font-size:13px;color:var(--text-muted);max-width:500px;margin:0 auto 20px;">
+          Please select a completed analysis from the dropdown above, or analyze a new bid in the Bid Analysis Workbench to chat with the AI assistant.
+        </p>
+        <button class="btn-primary" onclick="navigate('bid-analysis')">
+          Go to Bid Analysis Workbench
+        </button>
+      </div>
+
+      <!-- Active Chat Interface -->
+      <div id="assistant-active-chat-area" class="chat-container" style="display:none;">
+        <!-- Quick Prompts Bar -->
+        <div class="quick-prompts-bar">
+          <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;align-self:center;margin-right:4px;">
+            Suggested:
+          </span>
+          <button class="quick-prompt-btn" onclick="triggerQuickPrompt('Summarize compliance shortfalls.')">
+            🔍 Summarize compliance shortfalls
+          </button>
+          <button class="quick-prompt-btn" onclick="triggerQuickPrompt('Explain cross-document discrepancies.')">
+            ⚠️ Explain cross-document discrepancies
+          </button>
+          <button class="quick-prompt-btn" onclick="triggerQuickPrompt('Which documents are missing?')">
+            📑 Which documents are missing?
+          </button>
+          <button class="quick-prompt-btn" onclick="triggerQuickPrompt('Explain the Project Manager qualifications.')">
+            👤 Project Manager qualifications
+          </button>
+          <button class="quick-prompt-btn" onclick="triggerQuickPrompt('Explain the overall bid compliance result.')">
+            📊 Overall bid compliance result
+          </button>
+        </div>
+
+        <!-- Chat Messages Scroll Area -->
+        <div id="chat-messages-container" class="chat-messages"></div>
+
+        <!-- Loading Indicator -->
+        <div id="chat-loading-indicator" style="display:none;padding:10px 20px;font-size:12px;color:var(--text-muted);background:#FAFBFD;border-top:1px solid #F1F5F9;display:flex;align-items:center;gap:8px;">
+          <div class="spinner" style="width:16px;height:16px;margin:0;"></div>
+          <span>TenderIQ AI is analyzing stored compliance records...</span>
+        </div>
+
+        <!-- Error Box -->
+        <div id="chat-error-box" style="display:none;padding:10px 18px;background:#FEF2F2;color:#B91C1C;font-size:12px;border-top:1px solid #FCA5A5;"></div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-bar">
+          <textarea
+            id="chat-input"
+            class="chat-input"
+            rows="1"
+            placeholder="Ask a question about this bid analysis... (Enter to send, Shift+Enter for new line)"
+            onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendChatMessage(); }"
+          ></textarea>
+          <button id="btn-chat-send" class="btn-primary" style="height:42px;padding:0 20px;" onclick="sendChatMessage()">
+            <span>Send</span> ➔
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
     <section id="view-settings" class="spa-view" style="display:none;">
       <div class="page-heading">
         <div>
@@ -1342,6 +1554,11 @@ let allAnnexures   = [];
 let cachedAnalyses = [];
 let cachedTenders   = [];
 let cachedPackages  = {};
+let currentAnalysisId = null;
+let currentAnalysisMeta = null;
+let selectedAssistantAnalysisId = null;
+let assistantChatHistory = [];
+let isAssistantSending = false;
 
 /* ── helpers ── */
 function pct(part, total){ return total > 0 ? ((part/total)*100).toFixed(0)+'%' : '0%'; }
@@ -1373,6 +1590,7 @@ const ROUTES = {
   'tenders':      { title: 'Tenders',                 sectionId: 'view-tenders',       navId: 'nav-tenders' },
   'bid-analysis': { title: 'Bid Analysis Workbench',  sectionId: 'view-bid-analysis',  navId: 'nav-bid-analysis' },
   'conflicts':    { title: 'Cross-Doc Conflicts',     sectionId: 'view-conflicts',     navId: 'nav-conflicts' },
+  'ai-assistant': { title: 'AI Assistant',            sectionId: 'view-ai-assistant',  navId: 'nav-ai-assistant' },
   'evidence':     { title: 'Evidence Library',        sectionId: 'view-evidence',      navId: 'nav-evidence' },
   'reports':      { title: 'Reports & History',       sectionId: 'view-reports',       navId: 'nav-reports' },
   'audit':        { title: 'Audit Trail',             sectionId: 'view-audit',         navId: 'nav-audit' },
@@ -1403,7 +1621,8 @@ function navigate(targetRoute){
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // Route-specific data refresh
-  if(route === 'reports') loadReportsData();
+  if(route === 'ai-assistant') initAiAssistantView();
+  else if(route === 'reports') loadReportsData();
   else if(route === 'tenders') renderTendersView();
   else if(route === 'conflicts') renderConflictsView();
   else if(route === 'evidence') renderEvidenceView();
@@ -1856,6 +2075,14 @@ function displayResults(data){
     } else {
       evidenceHtml += `<div class="reasoning-box" style="color:var(--text-muted);"><strong>Audit Rationale:</strong> ${ev.reasoning}</div>`;
     }
+    const currentAid = data.analysis_id || data.id || currentAnalysisId || '';
+    evidenceHtml += `
+      <div style="margin-top:8px;">
+        <button class="btn-outline btn-sm" style="font-size:11px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;" onclick="explainClauseWithAI('${currentAid}', '${ev.requirement_id}', this); event.stopPropagation();">
+          <span>🤖</span> Explain with AI
+        </button>
+        <div id="ai-exp-${ev.requirement_id}" class="ai-explanation-box" style="display:none;margin-top:8px;"></div>
+      </div>`;
 
     tr.innerHTML=`
       <td>
@@ -2014,6 +2241,14 @@ async function viewAnalysisDetails(analysisId){
     const res = await fetch(`/api/analyses/${analysisId}`);
     if(!res.ok) throw new Error('Analysis record not found');
     const a = await res.json();
+    currentAnalysisId = a.id;
+    currentAnalysisMeta = {
+      id: a.id,
+      tender_filename: a.tender_filename,
+      bidder_filename: a.bidder_filename,
+      bidder_name: a.bidder_name,
+      overall_status: a.overall_status,
+    };
 
     title.textContent = `${(a.bidder_filename||'Bidder').replace('.pdf','')} vs ${(a.tender_filename||'Tender').replace('.pdf','')}`;
     subtitle.textContent = `Analysis ID: ${a.id} &bull; Recorded on ${fmtDate(a.created_at)} &bull; Engine: ${a.retrieval_method||'Sentence-BERT'} &bull; NLI: ${a.nli_enabled ? 'ON' : 'OFF'}`;
@@ -2069,6 +2304,12 @@ async function viewAnalysisDetails(analysisId){
               ${ev.nli_relation ? `<span>NLI: <strong>${ev.nli_relation}</strong></span>` : ''}
             </div>
             <div class="reasoning-box">${ev.reasoning}</div>
+            <div style="margin-top:8px;">
+              <button class="btn-outline btn-sm" style="font-size:11px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;" onclick="explainClauseWithAI('${a.id}', '${ev.requirement_id}', this); event.stopPropagation();">
+                <span>🤖</span> Explain with AI
+              </button>
+              <div id="ai-modal-exp-${ev.requirement_id}" class="ai-explanation-box" style="display:none;margin-top:8px;"></div>
+            </div>
           </td>
         </tr>`;
     }).join('');
@@ -2346,6 +2587,398 @@ async function renderAuditView(){
 
   }catch(err){
     container.innerHTML = `<div class="empty-state" style="color:var(--non-compliant);">Error loading audit records: ${err.message}</div>`;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   STEP 2G.5: AI ASSISTANT FRONTEND LOGIC
+═══════════════════════════════════════════════════════════════ */
+
+function escapeHtml(str) {
+  if(!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/* ── Check Assistant Health & Status ── */
+async function checkAssistantStatus() {
+  const pill = document.getElementById('assistant-status-pill');
+  const dot  = document.getElementById('assistant-status-dot');
+  const txt  = document.getElementById('assistant-status-text');
+  if(!pill || !txt) return;
+
+  try {
+    const res = await fetch('/api/assistant/status');
+    if(!res.ok) throw new Error('Status API unavailable');
+    const data = await res.json();
+
+    if(data.ollama_available) {
+      pill.className = 'ai-badge-pill online';
+      if(dot) dot.style.background = '#16A34A';
+      txt.textContent = 'Local AI Available (qwen2.5:1.5b)';
+    } else {
+      pill.className = 'ai-badge-pill offline';
+      if(dot) dot.style.background = '#F59E0B';
+      txt.textContent = 'Offline Fallback Active';
+    }
+  } catch(err) {
+    pill.className = 'ai-badge-pill offline';
+    if(dot) dot.style.background = '#F59E0B';
+    txt.textContent = 'Offline Fallback Active';
+  }
+}
+
+/* ── Initialize AI Assistant View ── */
+async function initAiAssistantView() {
+  checkAssistantStatus();
+  await populateAssistantDropdown();
+
+  // Option 3: If an analysis was already run or viewed in workbench, auto-select it
+  if(currentAnalysisId) {
+    const select = document.getElementById('assistant-analysis-select');
+    if(select) {
+      select.value = currentAnalysisId;
+      if(select.value === currentAnalysisId) {
+        onAssistantAnalysisChanged(false);
+        return;
+      }
+    }
+  }
+
+  // If already selected in assistant view, maintain it
+  if(selectedAssistantAnalysisId) {
+    const select = document.getElementById('assistant-analysis-select');
+    if(select && select.value !== selectedAssistantAnalysisId) {
+      select.value = selectedAssistantAnalysisId;
+      onAssistantAnalysisChanged(false);
+      return;
+    }
+  }
+
+  // Otherwise prompt user to select
+  updateAssistantViewVisibility(false);
+}
+
+/* ── Populate Analyses Dropdown ── */
+async function populateAssistantDropdown() {
+  const select = document.getElementById('assistant-analysis-select');
+  if(!select) return;
+
+  try {
+    const res = await fetch('/api/analyses');
+    if(!res.ok) throw new Error('Failed to load analyses');
+    const analyses = await res.json();
+    cachedAnalyses = analyses;
+
+    if(!analyses || analyses.length === 0) {
+      select.innerHTML = '<option value="">-- No Analysis Records in Database --</option>';
+      return;
+    }
+
+    let optionsHtml = '<option value="">-- Select an Analysis Record --</option>';
+    analyses.forEach(a => {
+      const bFile = a.bidder_filename || 'Unknown Bidder';
+      const tFile = a.tender_filename || 'Unknown Tender';
+      const dateStr = fmtDate(a.created_at);
+      const st = a.overall_status || 'UNCERTAIN';
+      optionsHtml += `<option value="${a.id}">${bFile} vs ${tFile} (${dateStr}) [${st}]</option>`;
+    });
+    select.innerHTML = optionsHtml;
+  } catch(err) {
+    console.warn('Error populating assistant dropdown:', err);
+    select.innerHTML = '<option value="">-- Failed to Load Analyses --</option>';
+  }
+}
+
+/* ── Handle Analysis Switch ── */
+async function onAssistantAnalysisChanged(resetHistory = true) {
+  const select = document.getElementById('assistant-analysis-select');
+  const aid = select ? select.value : '';
+
+  if(!aid) {
+    selectedAssistantAnalysisId = null;
+    updateAssistantViewVisibility(false);
+    if(resetHistory) {
+      assistantChatHistory = [];
+      clearChatMessages();
+    }
+    return;
+  }
+
+  selectedAssistantAnalysisId = aid;
+  currentAnalysisId = aid; // Keep workbench in sync
+
+  // Fetch or find analysis metadata
+  let a = (cachedAnalyses || []).find(item => item.id === aid);
+  if(!a) {
+    try {
+      const res = await fetch(`/api/analyses/${aid}`);
+      if(res.ok) a = await res.json();
+    } catch(e) { /* ignore */ }
+  }
+
+  // Update header metadata banner
+  const bTender = document.getElementById('assistant-meta-tender');
+  const bBidder = document.getElementById('assistant-meta-bidder');
+  const bVerdict = document.getElementById('assistant-meta-verdict');
+  const bId = document.getElementById('assistant-meta-id');
+
+  if(bTender) bTender.textContent = a ? a.tender_filename : 'Unknown Tender';
+  if(bBidder) bBidder.textContent = a ? `${a.bidder_name || 'Bidder'} (${a.bidder_filename})` : 'Unknown Bidder';
+  if(bVerdict) bVerdict.innerHTML = a ? overallBadge(a.overall_status) : '—';
+  if(bId) bId.textContent = aid;
+
+  updateAssistantViewVisibility(true);
+
+  if(resetHistory || assistantChatHistory.length === 0) {
+    assistantChatHistory = [];
+    clearChatMessages();
+
+    // Initial professional welcome message
+    const bidderName = a ? (a.bidder_name || a.bidder_filename) : 'the selected bidder';
+    const tenderName = a ? a.tender_filename : 'the tender document';
+    const welcomeText = `Hello! I am your TenderIQ Procurement Assistant. I have loaded the official evaluation records for **${bidderName}** against **${tenderName}**. You can ask me questions about compliance shortfalls, missing evidence, cross-document conflicts, or specific tender requirements.`;
+    renderChatMessage('assistant', welcomeText, null, false);
+  }
+}
+
+function updateAssistantViewVisibility(hasSelectedAnalysis) {
+  const metaBanner = document.getElementById('assistant-meta-banner');
+  const noPrompt   = document.getElementById('assistant-no-analysis-prompt');
+  const chatArea   = document.getElementById('assistant-active-chat-area');
+
+  if(hasSelectedAnalysis) {
+    if(metaBanner) metaBanner.style.display = 'flex';
+    if(noPrompt)   noPrompt.style.display = 'none';
+    if(chatArea)   chatArea.style.display = 'flex';
+  } else {
+    if(metaBanner) metaBanner.style.display = 'none';
+    if(noPrompt)   noPrompt.style.display = 'block';
+    if(chatArea)   chatArea.style.display = 'none';
+  }
+}
+
+function clearChatMessages() {
+  const container = document.getElementById('chat-messages-container');
+  if(container) container.innerHTML = '';
+}
+
+/* ── Render Chat Message Bubble ── */
+function renderChatMessage(role, text, citations = null, fallbackUsed = false) {
+  const container = document.getElementById('chat-messages-container');
+  if(!container) return;
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `chat-msg ${role}`;
+
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'chat-msg-header';
+  headerDiv.innerHTML = role === 'user' ? '<span>👤 You</span>' : '<span>🤖 TenderIQ Assistant</span>';
+
+  if(role === 'assistant' && fallbackUsed) {
+    const fb = document.createElement('span');
+    fb.className = 'chat-fallback-badge';
+    fb.textContent = 'Offline Fallback Active';
+    headerDiv.appendChild(fb);
+  }
+  msgDiv.appendChild(headerDiv);
+
+  const textDiv = document.createElement('div');
+  textDiv.style.whiteSpace = 'pre-wrap';
+  textDiv.textContent = text;
+  msgDiv.appendChild(textDiv);
+
+  // Render citations if available
+  if(citations && citations.length > 0) {
+    const citDiv = document.createElement('div');
+    citDiv.className = 'chat-msg-citations';
+
+    const hasValidCitation = citations.some(c => c.has_citation);
+    if(hasValidCitation) {
+      const citLabel = document.createElement('span');
+      citLabel.style.fontWeight = '600';
+      citLabel.textContent = 'Verified Provenance:';
+      citDiv.appendChild(citLabel);
+
+      citations.forEach(c => {
+        if(c.has_citation) {
+          const item = document.createElement('span');
+          const pageStr = c.page_number ? ` (Page ${c.page_number})` : '';
+          item.textContent = `📄 ${c.source_document}${pageStr}`;
+          citDiv.appendChild(item);
+        }
+      });
+    } else {
+      const item = document.createElement('span');
+      item.textContent = 'Verified Provenance: Source citation unavailable';
+      citDiv.appendChild(item);
+    }
+    msgDiv.appendChild(citDiv);
+  }
+
+  container.appendChild(msgDiv);
+  container.scrollTop = container.scrollHeight;
+}
+
+/* ── Send Chat Message ── */
+async function sendChatMessage(promptText = null) {
+  if(isAssistantSending) return;
+  if(!selectedAssistantAnalysisId) {
+    alert('Please select an analysis record before submitting a question.');
+    return;
+  }
+
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('btn-chat-send');
+  const loading = document.getElementById('chat-loading-indicator');
+  const errorBox = document.getElementById('chat-error-box');
+
+  const text = (promptText || (input ? input.value : '')).trim();
+  if(!text) return;
+
+  if(input) {
+    input.value = '';
+    input.style.height = 'auto';
+  }
+  if(errorBox) errorBox.style.display = 'none';
+
+  // Render user question
+  renderChatMessage('user', text);
+
+  // Update history
+  assistantChatHistory.push({ role: 'user', content: text });
+
+  // UI state: loading
+  isAssistantSending = true;
+  if(sendBtn) sendBtn.disabled = true;
+  if(input) input.disabled = true;
+  if(loading) loading.style.display = 'flex';
+
+  try {
+    const boundedHistory = assistantChatHistory.slice(-8);
+    const res = await fetch('/api/assistant/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        analysis_id: selectedAssistantAnalysisId,
+        message: text,
+        history: boundedHistory
+      })
+    });
+
+    if(!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to receive response from assistant');
+    }
+
+    const data = await res.json();
+    renderChatMessage('assistant', data.answer, data.citations, data.fallback_used);
+    assistantChatHistory.push({ role: 'assistant', content: data.answer });
+
+  } catch(err) {
+    if(errorBox) {
+      errorBox.textContent = `⚠️ Error: ${err.message}`;
+      errorBox.style.display = 'block';
+    }
+    renderChatMessage('assistant', `I encountered an issue retrieving the answer: ${err.message}. Please check that local Ollama is active or query a specific requirement ID.`);
+  } finally {
+    isAssistantSending = false;
+    if(sendBtn) sendBtn.disabled = false;
+    if(input) {
+      input.disabled = false;
+      input.focus();
+    }
+    if(loading) loading.style.display = 'none';
+  }
+}
+
+/* ── Trigger Quick Prompt ── */
+function triggerQuickPrompt(promptText) {
+  sendChatMessage(promptText);
+}
+
+/* ── Explain Clause With AI Action (Step 2G.4 & 2G.5) ── */
+async function explainClauseWithAI(analysisId, requirementId, btn) {
+  if(!analysisId) {
+    alert('Analysis record not found. Please run or select an analysis first.');
+    return;
+  }
+
+  const parent = btn.parentElement;
+  let box = parent.querySelector('.ai-explanation-box');
+  if(!box) {
+    box = document.createElement('div');
+    box.className = 'ai-explanation-box';
+    parent.appendChild(box);
+  }
+
+  // Toggle if already loaded
+  if(box.dataset.loaded === 'true' && box.style.display !== 'none') {
+    box.style.display = 'none';
+    btn.innerHTML = '<span>🤖</span> Explain with AI';
+    return;
+  }
+  if(box.dataset.loaded === 'true' && box.style.display === 'none') {
+    box.style.display = 'block';
+    btn.innerHTML = '<span>🤖</span> Hide AI Explanation';
+    return;
+  }
+
+  // Loading state
+  box.style.display = 'block';
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:12px;"><div class="spinner" style="width:14px;height:14px;margin:0;"></div> Analyzing requirement with local AI...</div>';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/assistant/explain-clause', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ analysis_id: analysisId, requirement_id: requirementId })
+    });
+
+    if(!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Clause explanation request failed');
+    }
+
+    const data = await res.json();
+
+    let citationStr = 'Source citation unavailable';
+    if(data.citations && data.citations.length > 0 && data.citations[0].has_citation) {
+      const c = data.citations[0];
+      citationStr = c.page_number ? `${c.source_document} (Page ${c.page_number})` : c.source_document;
+    }
+
+    const fallbackBadge = data.fallback_used
+      ? '<span style="font-size:10px;background:#FFFBEB;color:#92400E;border:1px solid #FDE68A;padding:2px 6px;border-radius:4px;font-weight:600;margin-left:auto;">Offline Fallback Active</span>'
+      : '<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;padding:2px 6px;border-radius:4px;font-weight:600;margin-left:auto;">Qwen 2.5 (1.5B)</span>';
+
+    box.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;border-bottom:1px solid #BAE6FD;padding-bottom:6px;flex-wrap:wrap;">
+        <span style="font-weight:700;font-size:11px;color:var(--primary);text-transform:uppercase;letter-spacing:.04em;">🤖 AI Explanation</span>
+        <span style="font-size:11px;color:var(--text-muted);">Official Verdict:</span>
+        ${labelBadge(data.official_verdict)}
+        ${fallbackBadge}
+      </div>
+      <div style="font-size:12px;color:var(--text);line-height:1.45;margin-bottom:6px;">
+        ${escapeHtml(data.explanation)}
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+        <span><strong>Verified Provenance:</strong> ${escapeHtml(citationStr)}</span>
+      </div>
+    `;
+    box.dataset.loaded = 'true';
+    btn.innerHTML = '<span>🤖</span> Hide AI Explanation';
+
+  } catch(err) {
+    box.innerHTML = `<div style="color:var(--non-compliant);font-size:11px;">⚠️ Explanation unavailable: ${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
   }
 }
 

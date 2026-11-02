@@ -21,6 +21,15 @@ from pydantic import BaseModel
 
 from backend.pipeline import CompliancePipeline, DEFAULT_BIDDER_ANNEXURES
 from backend.database.db_manager import DatabaseManager
+from backend.assistant import (
+    OllamaClient,
+    ExplanationService,
+    AnalysisContextBuilder,
+    ChatService,
+    AnalysisNotFoundError,
+    InvalidChatInputError,
+)
+
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 TENDERS_DIR = os.path.join(PROJECT_ROOT, "dataset", "synthetic_pdfs", "tenders")
@@ -43,7 +52,61 @@ app.add_middleware(
 
 pipeline = CompliancePipeline()
 db_manager = DatabaseManager()
+ollama_client = OllamaClient()
+explanation_service = ExplanationService(ollama_client=ollama_client)
+context_builder = AnalysisContextBuilder(db_manager=db_manager)
+chat_service = ChatService(ollama_client=ollama_client, context_builder=context_builder)
 
+
+
+
+class ChatMessageModel(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequestModel(BaseModel):
+    analysis_id: str
+    message: str
+    history: Optional[List[ChatMessageModel]] = None
+
+
+class CitationModel(BaseModel):
+    source_document: str
+    page_number: Optional[int] = None
+    has_citation: bool = True
+
+
+class ChatResponseModel(BaseModel):
+    analysis_id: str
+    answer: str
+    citations: List[CitationModel]
+    model_used: str
+    fallback_used: bool
+
+
+class AssistantStatusResponse(BaseModel):
+    ollama_available: bool
+    configured_model: str
+    model_available: bool
+    deterministic_fallback_available: bool
+
+
+class ClauseExplanationRequest(BaseModel):
+    analysis_id: str
+    requirement_id: str
+
+
+class ClauseExplanationResponse(BaseModel):
+    analysis_id: str
+    requirement_id: str
+    official_verdict: str
+    explanation: str
+    evidence_summary: str
+    citations: List[CitationModel]
+    model_used: str
+    fallback_used: bool
+    confidence: float = 1.0
 
 class AnalysisRequest(BaseModel):
     tender_filename: str
@@ -237,6 +300,84 @@ def dashboard_stats():
         "review_queue":          review_queue_items,
         "recent_analyses":       analyses[:8],
     }
+
+
+# -------------------------------------------------------------
+# AI Assistant & Explanation Endpoints (Step 2G.4)
+# -------------------------------------------------------------
+@app.post("/api/assistant/chat", response_model=ChatResponseModel)
+def assistant_chat(request: ChatRequestModel):
+    """Answers evaluator questions about a specific analysis using stored results as source of truth."""
+    try:
+        history_dicts = (
+            [{"role": m.role, "content": m.content} for m in request.history]
+            if request.history
+            else None
+        )
+        res = chat_service.chat(
+            analysis_id=request.analysis_id,
+            user_message=request.message,
+            history=history_dicts,
+        )
+        return ChatResponseModel(
+            analysis_id=res.analysis_id,
+            answer=res.answer,
+            citations=[CitationModel(**c) for c in res.citations],
+            model_used=res.model_used,
+            fallback_used=res.fallback_used,
+        )
+    except AnalysisNotFoundError as enf:
+        raise HTTPException(status_code=404, detail=str(enf))
+    except InvalidChatInputError as ive:
+        raise HTTPException(status_code=400, detail=str(ive))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Assistant service error: {str(exc)}")
+
+
+@app.get("/api/assistant/status", response_model=AssistantStatusResponse)
+def assistant_status():
+    """Returns local AI availability status without failing if Ollama is offline."""
+    is_avail = ollama_client.is_available()
+    return AssistantStatusResponse(
+        ollama_available=is_avail,
+        configured_model=ollama_client.model_name,
+        model_available=is_avail,
+        deterministic_fallback_available=True,
+    )
+
+
+@app.post("/api/assistant/explain-clause", response_model=ClauseExplanationResponse)
+def explain_clause_endpoint(request: ClauseExplanationRequest):
+    """Retrieves an evaluated requirement from a specific analysis and generates an explanation."""
+    analysis = db_manager.get_analysis_by_id(request.analysis_id)
+    if not analysis:
+        raise HTTPException(status_code=404, detail=f"Analysis not found: {request.analysis_id}")
+
+    target_req = request.requirement_id.strip().upper()
+    matched_eval = None
+    for ev in analysis.get("evaluations", []):
+        if ev.get("requirement_id", "").strip().upper() == target_req:
+            matched_eval = ev
+            break
+
+    if not matched_eval:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Requirement '{request.requirement_id}' not found in analysis '{request.analysis_id}'",
+        )
+
+    res = explanation_service.explain_clause(matched_eval)
+    return ClauseExplanationResponse(
+        analysis_id=request.analysis_id,
+        requirement_id=res.requirement_id,
+        official_verdict=res.official_verdict,
+        explanation=res.explanation,
+        evidence_summary=res.evidence_summary,
+        citations=[CitationModel(**c) for c in res.citations],
+        model_used=res.model_used,
+        fallback_used=res.fallback_used,
+        confidence=res.confidence,
+    )
 
 
 # -------------------------------------------------------------
