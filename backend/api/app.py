@@ -50,7 +50,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-pipeline = CompliancePipeline()
+# Resource-conscious memory configuration for cloud deployment (initial 512MB Railway tier)
+ENABLE_SEMANTIC_RETRIEVER = os.getenv("ENABLE_SEMANTIC_RETRIEVER", "0").lower() in ("1", "true", "yes")
+ENABLE_NLI_MODEL = os.getenv("ENABLE_NLI_MODEL", "0").lower() in ("1", "true", "yes")
+
+pipeline = CompliancePipeline(
+    enable_nli=ENABLE_NLI_MODEL,
+    default_retrieval_method="semantic" if ENABLE_SEMANTIC_RETRIEVER else "tfidf",
+)
 db_manager = DatabaseManager()
 ollama_client = OllamaClient()
 explanation_service = ExplanationService(ollama_client=ollama_client)
@@ -391,3 +398,9 @@ def index_page():
         with open(html_file, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<!DOCTYPE html><html><body><h1>TenderIQ</h1></body></html>")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("backend.api.app:app", host="0.0.0.0", port=port)

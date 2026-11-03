@@ -1549,6 +1549,31 @@
    Preserves all existing IDs, functions, and test contracts.
 ═══════════════════════════════════════════════════════════════ */
 
+// Dynamic API base resolution: allows cross-origin deployment (e.g. Vercel frontend -> Railway backend)
+const API_BASE = (() => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('api')) {
+      const url = params.get('api').replace(/\/+$/, '');
+      localStorage.setItem('tenderiq_api_url', url);
+      return url;
+    }
+    return (localStorage.getItem('tenderiq_api_url') || '').replace(/\/+$/, '');
+  } catch (_) {
+    return '';
+  }
+})();
+
+if (API_BASE) {
+  const _origFetch = window.fetch;
+  window.fetch = function(resource, init) {
+    if (typeof resource === 'string' && resource.startsWith('/api/')) {
+      return _origFetch(API_BASE + resource, init);
+    }
+    return _origFetch(resource, init);
+  };
+}
+
 let packageMapping = {};
 let allAnnexures   = [];
 let cachedAnalyses = [];

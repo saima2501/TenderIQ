@@ -13,7 +13,10 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-DB_FILE_PATH = os.path.join(os.path.dirname(__file__), "compliance_demo.db")
+DB_FILE_PATH = os.getenv(
+    "DATABASE_PATH",
+    os.path.join(os.path.dirname(__file__), "compliance_demo.db")
+)
 
 
 class DatabaseManager:

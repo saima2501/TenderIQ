@@ -406,3 +406,41 @@ def test_10_context_limitation_note_included_when_exceeding_eight_clauses():
     prompt = ctx.format_for_prompt(max_clauses=8)
 
     assert "[Note: Context summarized; 4 additional clauses recorded in database]" in prompt
+
+
+def test_11_cloudflare_access_headers_and_secret_redaction(caplog):
+    """11. OllamaClient attaches Cloudflare Access headers and does not log credentials."""
+    client = OllamaClient(
+        base_url="https://ollama.example.com",
+        cf_client_id="cf-id-12345",
+        cf_client_secret="cf-secret-super-sensitive-99999",
+        auth_token="bearer-token-secret-88888",
+    )
+    headers = client._get_headers()
+    assert headers["CF-Access-Client-Id"] == "cf-id-12345"
+    assert headers["CF-Access-Client-Secret"] == "cf-secret-super-sensitive-99999"
+    assert headers["Authorization"] == "Bearer bearer-token-secret-88888"
+    assert headers["X-Auth-Token"] == "bearer-token-secret-88888"
+
+    # Verify generate sends headers and does not log secrets on failure
+    with patch("httpx.Client") as mock_httpx_cls:
+        mock_ctx = MagicMock()
+        mock_httpx_cls.return_value.__enter__.return_value = mock_ctx
+        mock_res = MagicMock()
+        mock_res.status_code = 403
+        mock_res.text = "Forbidden by Cloudflare Access"
+        mock_ctx.post.return_value = mock_res
+
+        result = client.generate("test prompt")
+        assert result is None
+
+        # Verify headers were passed to post
+        mock_ctx.post.assert_called_once()
+        _, kwargs = mock_ctx.post.call_args
+        assert kwargs["headers"]["CF-Access-Client-Id"] == "cf-id-12345"
+        assert kwargs["headers"]["CF-Access-Client-Secret"] == "cf-secret-super-sensitive-99999"
+
+        # Verify secrets are NOT logged in any log level
+        for record in caplog.records:
+            assert "cf-secret-super-sensitive-99999" not in record.message
+            assert "bearer-token-secret-88888" not in record.message

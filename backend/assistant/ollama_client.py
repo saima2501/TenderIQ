@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_OLLAMA_ENDPOINT = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
+DEFAULT_OLLAMA_AUTH_TOKEN = os.getenv("OLLAMA_AUTH_TOKEN", "")
+DEFAULT_OLLAMA_CF_CLIENT_ID = os.getenv("OLLAMA_CF_CLIENT_ID", "")
+DEFAULT_OLLAMA_CF_CLIENT_SECRET = os.getenv("OLLAMA_CF_CLIENT_SECRET", "")
 DEFAULT_CONNECT_TIMEOUT = float(os.getenv("OLLAMA_CONNECT_TIMEOUT", "2.0"))
 DEFAULT_REQUEST_TIMEOUT = float(os.getenv("OLLAMA_REQUEST_TIMEOUT", "45.0"))
 
@@ -28,11 +31,17 @@ class OllamaClient:
         self,
         base_url: str = DEFAULT_OLLAMA_ENDPOINT,
         model_name: str = DEFAULT_OLLAMA_MODEL,
+        auth_token: Optional[str] = None,
+        cf_client_id: Optional[str] = None,
+        cf_client_secret: Optional[str] = None,
         connect_timeout: float = DEFAULT_CONNECT_TIMEOUT,
         request_timeout: float = DEFAULT_REQUEST_TIMEOUT,
     ):
         self.base_url = base_url.rstrip("/")
         self.model_name = model_name
+        self.auth_token = auth_token if auth_token is not None else DEFAULT_OLLAMA_AUTH_TOKEN
+        self.cf_client_id = cf_client_id if cf_client_id is not None else DEFAULT_OLLAMA_CF_CLIENT_ID
+        self.cf_client_secret = cf_client_secret if cf_client_secret is not None else DEFAULT_OLLAMA_CF_CLIENT_SECRET
         self.connect_timeout = connect_timeout
         self.request_timeout = request_timeout
         self._timeout = httpx.Timeout(
@@ -40,11 +49,25 @@ class OllamaClient:
             connect=self.connect_timeout,
         )
 
+    def _get_headers(self) -> Dict[str, str]:
+        """Returns HTTP headers including optional authentication tokens."""
+        headers = {"Content-Type": "application/json"}
+        if self.cf_client_id and self.cf_client_secret:
+            headers["CF-Access-Client-Id"] = self.cf_client_id
+            headers["CF-Access-Client-Secret"] = self.cf_client_secret
+        if self.auth_token:
+            headers["Authorization"] = f"Bearer {self.auth_token}"
+            headers["X-Auth-Token"] = self.auth_token
+        return headers
+
     def is_available(self) -> bool:
         """Checks if local Ollama daemon is reachable and responding."""
         try:
             with httpx.Client(timeout=httpx.Timeout(2.0, connect=1.0)) as client:
-                res = client.get(f"{self.base_url}/api/tags")
+                res = client.get(
+                    f"{self.base_url}/api/tags",
+                    headers=self._get_headers()
+                )
                 return res.status_code == 200
         except Exception:
             return False
@@ -81,7 +104,7 @@ class OllamaClient:
                 res = client.post(
                     f"{self.base_url}/api/chat",
                     json=payload,
-                    headers={"Content-Type": "application/json"},
+                    headers=self._get_headers(),
                 )
 
                 if res.status_code != 200:
