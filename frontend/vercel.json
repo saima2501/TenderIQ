@@ -1,3 +1,9 @@
 {
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://tenderiq-backend-tqrh.onrender.com/api/:path*"
+    }
+  ]
 }
