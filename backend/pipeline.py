@@ -44,6 +44,7 @@ class CompliancePipeline:
         min_semantic_threshold: float = 0.25,
         default_retrieval_method: str = "semantic",
         semantic_model_name: str = "all-MiniLM-L6-v2",
+        enable_semantic: bool = True,
         enable_nli: bool = True,
         nli_model_name: str = "cross-encoder/nli-distilroberta-base",
         enable_reconciliation: bool = True,
@@ -51,6 +52,7 @@ class CompliancePipeline:
     ):
         self.strip_simulation_banners = strip_simulation_banners
         self.default_retrieval_method = default_retrieval_method
+        self.enable_semantic = enable_semantic
         self.enable_nli = enable_nli
         self.nli_model_name = nli_model_name
         self.enable_reconciliation = enable_reconciliation
@@ -60,15 +62,19 @@ class CompliancePipeline:
         
         # Dual retrievers: TF-IDF baseline and Sentence-BERT semantic
         self.tfidf_retriever = TFIDFRetriever(min_similarity_threshold=min_retrieval_threshold)
-        self.semantic_retriever = SemanticRetriever(
-            model_name=semantic_model_name,
-            min_similarity_threshold=min_semantic_threshold,
-            fallback_to_tfidf=True
-        )
+        if enable_semantic:
+            self.semantic_retriever = SemanticRetriever(
+                model_name=semantic_model_name,
+                min_similarity_threshold=min_semantic_threshold,
+                fallback_to_tfidf=True
+            )
+        else:
+            self.semantic_retriever = None
+
         # Default retriever pointer for backward compatibility
         self.retriever = (
             self.semantic_retriever
-            if "semantic" in default_retrieval_method.lower()
+            if ("semantic" in default_retrieval_method.lower() and self.semantic_retriever)
             else self.tfidf_retriever
         )
         self.classifier = BaselineClassifier(
@@ -163,7 +169,7 @@ class CompliancePipeline:
 
             # 4. Determine Active Retrieval Engine
             method = (retrieval_method or self.default_retrieval_method).lower()
-            if "semantic" in method:
+            if "semantic" in method and self.semantic_retriever and getattr(self.semantic_retriever, "is_available", False):
                 active_retriever = self.semantic_retriever
             else:
                 active_retriever = self.tfidf_retriever

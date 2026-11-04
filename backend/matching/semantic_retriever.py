@@ -25,13 +25,9 @@ from backend.matching.tfidf_retriever import (
 
 logger = logging.getLogger(__name__)
 
-# Try importing SentenceTransformer with graceful fallback
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SentenceTransformer = None
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+# Lazy import holder for SentenceTransformer to prevent eager PyTorch memory allocation
+SentenceTransformer = None
+SENTENCE_TRANSFORMERS_AVAILABLE = None
 
 
 class SemanticRetriever:
@@ -66,6 +62,16 @@ class SemanticRetriever:
 
     def _initialize_model(self):
         """Loads the SentenceTransformer model on CPU with transparent error logging."""
+        global SentenceTransformer, SENTENCE_TRANSFORMERS_AVAILABLE
+        if SENTENCE_TRANSFORMERS_AVAILABLE is None:
+            try:
+                from sentence_transformers import SentenceTransformer as _ST
+                SentenceTransformer = _ST
+                SENTENCE_TRANSFORMERS_AVAILABLE = True
+            except ImportError:
+                SentenceTransformer = None
+                SENTENCE_TRANSFORMERS_AVAILABLE = False
+
         if not SENTENCE_TRANSFORMERS_AVAILABLE:
             self.is_available = False
             self.init_error = "sentence-transformers library is not installed in the environment."

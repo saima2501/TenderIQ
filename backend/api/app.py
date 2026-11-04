@@ -55,6 +55,7 @@ ENABLE_SEMANTIC_RETRIEVER = os.getenv("ENABLE_SEMANTIC_RETRIEVER", "0").lower() 
 ENABLE_NLI_MODEL = os.getenv("ENABLE_NLI_MODEL", "0").lower() in ("1", "true", "yes")
 
 pipeline = CompliancePipeline(
+    enable_semantic=ENABLE_SEMANTIC_RETRIEVER,
     enable_nli=ENABLE_NLI_MODEL,
     default_retrieval_method="semantic" if ENABLE_SEMANTIC_RETRIEVER else "tfidf",
 )
@@ -63,6 +64,53 @@ ollama_client = OllamaClient()
 explanation_service = ExplanationService(ollama_client=ollama_client)
 context_builder = AnalysisContextBuilder(db_manager=db_manager)
 chat_service = ChatService(ollama_client=ollama_client, context_builder=context_builder)
+
+
+def seed_initial_demo_if_empty(
+    database: Optional[DatabaseManager] = None,
+    nlp_pipeline: Optional[CompliancePipeline] = None,
+) -> bool:
+    """Idempotently seeds an initial demonstration analysis if the database has zero records.
+
+    Reuses existing bundled synthetic tender, proposal, and audited annexure.
+    Returns True if seeding occurred, False if database already contains records or skipped.
+    """
+    target_db = database if database is not None else db_manager
+    target_pipeline = nlp_pipeline if nlp_pipeline is not None else pipeline
+
+    try:
+        existing = target_db.list_analyses()
+        if existing:
+            return False
+
+        demo_tender = os.path.join(TENDERS_DIR, "TENDER-2024-IT-001.pdf")
+        demo_bidder = os.path.join(BIDDERS_DIR, "BIDDER-ALPHA-TECH-PROPOSAL.pdf")
+        demo_annexure = os.path.join(BIDDERS_DIR, "ANNEXURE-FINANCIAL-STATEMENTS.pdf")
+
+        if not (os.path.exists(demo_tender) and os.path.exists(demo_bidder) and os.path.exists(demo_annexure)):
+            return False
+
+        # Run pipeline using existing configuration (TF-IDF, no heavy downloads)
+        report = target_pipeline.run(
+            tender_pdf_path=demo_tender,
+            bidder_pdf_path=demo_bidder,
+            annexure_pdf_paths=[demo_annexure],
+            retrieval_method="tfidf",
+            enable_nli=False,
+            save_to_db=False,
+        )
+        target_db.save_analysis(report)
+        return True
+    except Exception as exc:
+        import logging
+        logging.getLogger("backend.api.app").warning("Startup demo seeding failed: %s", exc)
+        return False
+
+
+@app.on_event("startup")
+def on_startup():
+    """Startup hook to verify database connectivity and initialize baseline demo data if empty."""
+    seed_initial_demo_if_empty()
 
 
 
@@ -136,10 +184,10 @@ def health():
         "phase_7_cross_doc_reconciliation": True,
         "current_phase": 7,
         "semantic_retriever": {
-            "available": pipeline.semantic_retriever.is_available,
-            "model_name": pipeline.semantic_retriever.model_name,
-            "device": pipeline.semantic_retriever.device,
-            "error": pipeline.semantic_retriever.init_error
+            "available": getattr(pipeline.semantic_retriever, "is_available", False) if pipeline.semantic_retriever else False,
+            "model_name": getattr(pipeline.semantic_retriever, "model_name", None) if pipeline.semantic_retriever else None,
+            "device": getattr(pipeline.semantic_retriever, "device", None) if pipeline.semantic_retriever else None,
+            "error": getattr(pipeline.semantic_retriever, "init_error", None) if pipeline.semantic_retriever else "Disabled via ENABLE_SEMANTIC_RETRIEVER=0"
         },
         "nli_classifier": {
             "available": getattr(nli_clf, "is_available", False) if nli_clf else False,

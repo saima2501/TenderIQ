@@ -21,13 +21,9 @@ from typing import List, Dict, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Try importing CrossEncoder with graceful fallback
-try:
-    from sentence_transformers import CrossEncoder
-    CROSS_ENCODER_AVAILABLE = True
-except ImportError:
-    CrossEncoder = None
-    CROSS_ENCODER_AVAILABLE = False
+# Lazy import holder for CrossEncoder to prevent eager PyTorch memory allocation
+CrossEncoder = None
+CROSS_ENCODER_AVAILABLE = None
 
 
 @dataclass
@@ -72,6 +68,16 @@ class NLIClassifier:
 
     def _initialize_model(self):
         """Loads CrossEncoder on CPU with explicit error capture."""
+        global CrossEncoder, CROSS_ENCODER_AVAILABLE
+        if CROSS_ENCODER_AVAILABLE is None:
+            try:
+                from sentence_transformers import CrossEncoder as _CE
+                CrossEncoder = _CE
+                CROSS_ENCODER_AVAILABLE = True
+            except ImportError:
+                CrossEncoder = None
+                CROSS_ENCODER_AVAILABLE = False
+
         if not CROSS_ENCODER_AVAILABLE:
             self.is_available = False
             self.init_error = "sentence_transformers.CrossEncoder library is not installed."
