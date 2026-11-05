@@ -14,6 +14,32 @@ Operating entirely on local CPU without paid third-party APIs or black-box gener
 
 ---
 
+## 🚀 Live Demo
+
+**Try TenderIQ:** https://tenderiq-frontend-lyart.vercel.app/
+
+[**Open TenderIQ Live Demo**](https://tenderiq-frontend-lyart.vercel.app/)
+
+> **Note on Free Cloud Hosting:** The public demo runs on free cloud hosting (Vercel for the frontend and Render for the backend API). When inactive, the free Render backend spins down to conserve resources. If the service has been idle, the initial request may take **30 to 60 seconds** to wake up (cold start). Once awake, subsequent requests respond normally.
+
+---
+
+## Running Locally (Full NLP Mode)
+
+While the public cloud demo operates in a lightweight mode to fit free-tier cloud limits, running TenderIQ locally supports the complete, full-scale NLP architecture:
+
+- **Sentence-BERT (`all-MiniLM-L6-v2`):** Dense semantic retrieval of bidder evidence sentences.
+- **NLI Cross-Encoder (`nli-distilroberta-base`):** Cross-encoder classification detecting subtle negations, waivers, and contradictions.
+- **TF-IDF Retrieval:** High-speed lexical fallback matching.
+- **Cross-Document Reconciliation:** Deterministic source-tier precedence (Tier 1 Audited Annexures > Tier 3 Proposal Narrative).
+- **Ollama with Qwen 2.5 1.5B (`qwen2.5:1.5b`):** Local grounded conversational assistant and audit explanations.
+- **Local Startup Script:** Launch everything with one command or double-click using `run_local.bat` (or `.\run_local.ps1` in PowerShell).
+- **Local Dashboard:** Accessible at [http://127.0.0.1:8000/](http://127.0.0.1:8000/) with all model indicator pills showing **Online**.
+
+> **Cloud vs. Local Configuration:** To comply strictly with Render's free 512 MB RAM limit, the cloud deployment runs in lightweight demo mode (`ENABLE_SEMANTIC_RETRIEVER=0`, `ENABLE_NLI_MODEL=0`) using deterministic and TF-IDF matching with pre-seeded demo records. The full transformer pipeline and local Ollama model are exclusive to the local setup.
+
+---
+
 ## 2. Problem Statement
 
 Public procurement authorities (such as India's Government e-Marketplace — GeM) process high-stakes tenders containing hundreds of technical, financial, statutory, experience, and Service Level Agreement (SLA) clauses. Evaluating multiple bidder submissions against these requirements involves reviewing hundreds of pages of proposals, audited financial schedules, and technical datasheets.
@@ -48,7 +74,7 @@ TenderIQ addresses these challenges by enforcing a strict **zero-hallucination, 
 
 ## 5. Main Features Currently Implemented (Phases 1–7)
 
-- [x] **Phase 1: Synthetic Dataset & Ground Truth Engineering:** 556 structured requirement-evidence pairs across 4 simulated tenders and 5 bidders covering 9 challenge subtypes (`dataset/splits/`).
+- [x] **Phase 1: Synthetic Dataset & Ground Truth Engineering:** 620 structured requirement-evidence pairs across 4 simulated tenders and 6 bidders covering 9 challenge subtypes (`dataset/splits/`).
 - [x] **Phase 2: PDF Extraction Pipeline with Fallback:** Layout-aware text extraction via `pdfplumber` with automatic fallback to `PyMuPDF` (`fitz`), preserving 1-indexed page numbering and flagging scanned bitmap pages (`is_scanned=True`, `SCANNED_NEEDS_OCR`).
 - [x] **Phase 3: Structured Information Extraction:** Rule-based NLP extractors (`RequirementExtractor`, `EvidenceExtractor`) that parse parameters, comparison operators, threshold values, units, statutory entities (GSTIN, PAN, ISO), and negation markers.
 - [x] **Phase 4: Deterministic Baseline Engine:** Unigram/bigram TF-IDF retrieval, deterministic `NumericComparator`, rule-based `BaselineClassifier`, and SQLite persistence (`compliance_demo.db`).
@@ -150,11 +176,11 @@ TenderIQ categorizes every tender requirement into one of four distinct, non-ove
 ## 9. Dataset Information
 
 - **Type:** Fully simulated synthetic procurement corpus modeled after GeM tender formats.
-- **Data Volume:** 556 total requirement-evidence pairs across 4 simulated tenders and 5 bidding entities.
+- **Data Volume:** 620 total requirement-evidence pairs across 4 simulated tenders and 6 bidding entities.
 - **Split Strategy:** Stratified multi-class split into:
-  - **Train:** 387 records (69.6%)
-  - **Validation:** 82 records (14.7%)
-  - **Test (Held-Out Benchmark Split):** 87 records (15.6%)
+  - **Train:** 439 records (70.8%)
+  - **Validation:** 94 records (15.2%)
+  - **Test (Held-Out Benchmark Split):** 87 records (14.0%)
 - **Challenge Subtypes Represented:**
   - `numerical_boundary`: Boundary checks right at the threshold ($10.0\text{M}$ vs $10.0\text{M}$, $9.99\text{M}$ vs $10.0\text{M}$).
   - `unit_conversion`: Cross-unit equivalencies (months to years, Gbps to Mbps).
@@ -212,7 +238,7 @@ Total Predicted           27            19            25             16         
 
 ### Step 1: Clone Repository
 ```powershell
-git clone https://github.com/your-username/TenderIQ.git
+git clone https://github.com/saima2501/TenderIQ.git
 cd TenderIQ
 ```
 
@@ -235,6 +261,10 @@ pip install -r requirements.txt
 ### Step 1: Launch FastAPI Server
 From the project root with the virtual environment activated, run:
 ```powershell
+# Option A: One-click local startup (enables Sentence-BERT, NLI Cross-Encoder & connects local Ollama)
+.\run_local.bat
+
+# Option B: Manual startup via Uvicorn
 # Set offline cache variables for CPU execution
 $env:HF_HUB_OFFLINE="1"
 $env:TRANSFORMERS_OFFLINE="1"
@@ -261,7 +291,7 @@ http://127.0.0.1:8000
 
 ## 13. Instructions to Run Tests
 
-TenderIQ includes 127 automated tests across 8 test suites. Execute the complete test suite with:
+TenderIQ includes 318 automated tests across its backend test suites. (Note: This 318-test count represents the latest reported result of the automated engineering test suite verifying API contracts, extraction, classification, reconciliation, and seeding, distinct from the 87-record held-out NLP benchmark metric). Execute the complete test suite with:
 
 ```powershell
 $env:HF_HUB_OFFLINE="1"
@@ -271,7 +301,7 @@ pytest -o pythonpath=. backend/ -v
 
 ### Expected Output
 ```text
-======================= 127 passed in ~160s =======================
+======================= 318 passed in ~180s =======================
 ```
 
 To run individual phase test suites:
